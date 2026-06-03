@@ -22,7 +22,7 @@
   --guilherme: #f59e0b;
   --lauanny:   #3b82f6;
   --larissa:   #ec8c4e;
-  --felipe:    #a78bfa;
+  --jessica:   #a78bfa;
   --ok:        #22c55e;
   --warn:      #f59e0b;
   --danger:    #ef4444;
@@ -220,7 +220,7 @@ tbody tr:hover td{background:#fafbff;}
 <div id="view-calendario" class="view">
   <div class="container">
     <div class="section">
-      <div class="section-label">Calendário de Férias 2025</div>
+      <div class="section-label">Calendário de Férias 2026</div>
       <div class="legenda" id="legenda"></div>
       <div class="cal-wrap">
         <div class="cal-inner">
@@ -249,7 +249,8 @@ tbody tr:hover td{background:#fafbff;}
           <option value="GUILHERME">Guilherme</option>
           <option value="LAUANNY">Lauanny</option>
           <option value="LARISSA">Larissa</option>
-          <option value="FELIPE">Felipe</option>
+          <option value="JESSICA">Jessica</option>
+          <option value="GEOVANA">Geovana</option>
         </select>
       </div>
       <div class="form-row">
@@ -317,7 +318,8 @@ const TIMES = {
   GUILHERME: { cor:'#f59e0b', bg:'#fef9ec', label:'Guilherme' },
   LAUANNY:   { cor:'#3b82f6', bg:'#eff6ff', label:'Lauanny' },
   LARISSA:   { cor:'#ec8c4e', bg:'#fef3ec', label:'Larissa' },
-  FELIPE:    { cor:'#a78bfa', bg:'#f5f3ff', label:'Felipe' },
+  JESSICA:   { cor:'#a78bfa', bg:'#f5f3ff', label:'Jessica' },
+  GEOVANA:   { cor:'#f472b6', bg:'#fdf2f8', label:'Geovana' },
 };
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -437,7 +439,7 @@ function renderAlertas() {
 function renderFiltros() {
   const div = document.getElementById('filtros');
   if (div.children.length > 0) return; // já renderizado
-  ['TODOS','FERNANDA','GABRIELA','GABRYEL','GUILHERME','LAUANNY','LARISSA','FELIPE'].forEach(t => {
+  ['TODOS','FERNANDA','GABRIELA','GABRYEL','GUILHERME','LAUANNY','LARISSA','JESSICA','GEOVANA'].forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'filtro-btn' + (t==='TODOS' ? ' active' : '');
     btn.dataset.filtro = t;
@@ -522,7 +524,7 @@ function renderCal() {
         const im = new Date(r.inicio+'T12:00:00').getMonth();
         const fm = new Date(r.fim+'T12:00:00').getMonth();
         const iy = new Date(r.inicio+'T12:00:00').getFullYear();
-        return mes>=im && mes<=fm && iy===2025;
+        return mes>=im && mes<=fm && iy===2026;
       });
       if (lan) {
         const di = new Date(lan.inicio+'T12:00:00');
