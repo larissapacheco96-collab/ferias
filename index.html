@@ -119,8 +119,8 @@ tbody tr:hover td{background:#fafbff;}
 .cal-head{background:#f8f9fc;padding:10px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
 .cal-name-cell{background:var(--white);padding:10px 14px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;color:var(--text);}
 .cal-team-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
-.cal-cell{background:var(--white);min-height:40px;position:relative;}
-.cal-bar{position:absolute;inset:5px 3px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;overflow:hidden;padding:0 3px;white-space:nowrap;}
+.cal-cell{background:var(--white);min-height:44px;position:relative;}
+.cal-bar{position:absolute;inset:4px 2px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff;overflow:hidden;padding:0 4px;white-space:nowrap;letter-spacing:0.2px;}
 
 /* LEGENDA */
 .legenda{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;}
@@ -239,8 +239,20 @@ tbody tr:hover td{background:#fafbff;}
 <div id="view-calendario" class="view">
   <div class="container">
     <div class="section">
-      <div class="section-label">Calendário de Férias 2026</div>
-      <div class="legenda" id="legenda"></div>
+      <div class="section-label">Calendário de Férias</div>
+      <!-- Linha 1: legenda + ano -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+        <div class="legenda" id="legenda"></div>
+        <select id="calAno" onchange="renderCal()" style="padding:7px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;color:var(--text);background:var(--white);cursor:pointer;">
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+        </select>
+      </div>
+      <!-- Linha 2: filtro time -->
+      <div class="filtro-bar" id="filtrosCal" style="margin-bottom:8px"></div>
+      <!-- Linha 3: filtro mês -->
+      <div class="filtro-bar" id="filtrosMes" style="margin-bottom:14px"></div>
       <div class="cal-wrap">
         <div class="cal-inner">
           <div class="cal-grid" id="calGrid"><div class="loading"><div class="spinner"></div><br>Carregando...</div></div>
@@ -347,6 +359,7 @@ let editId = null;
 let filtroAtivo = 'TODOS';
 
 // Expor funções para HTML onclick
+window.renderCal       = renderCal;
 window.abrirModal      = abrirModal;
 window.fecharModal     = fecharModal;
 window.salvarRegistro  = salvarRegistro;
@@ -375,6 +388,8 @@ function renderTudo() {
   renderTabela(filtroAtivo);
   renderCal();
   renderFiltros();
+  renderFiltrosCal();
+  renderFiltrosMes();
   renderLegenda();
 }
 
@@ -583,48 +598,195 @@ function renderTabela(filtro='TODOS') {
   });
 }
 
+// FILTRO CALENDÁRIO
+let filtroCalTime = 'TODOS';
+let filtroCalMes  = -1; // -1 = todos os meses
+
+function renderFiltrosCal() {
+  const div = document.getElementById('filtrosCal');
+  if (!div || div.children.length > 0) return;
+  ['TODOS','FERNANDA','GABRIELA','GABRYEL','GUILHERME','LAUANNY','LARISSA','JESSICA','GEOVANA'].forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'filtro-btn' + (t==='TODOS' ? ' active' : '');
+    btn.dataset.filtro = t;
+    const tc = TIMES[t];
+    btn.innerHTML = tc ? `<span class="filtro-dot" style="background:${tc.cor}"></span>${tc.label}` : 'Todos';
+    btn.onclick = () => {
+      document.querySelectorAll('#filtrosCal .filtro-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      filtroCalTime = t;
+      renderCal();
+    };
+    div.appendChild(btn);
+  });
+}
+
+function renderFiltrosMes() {
+  const div = document.getElementById('filtrosMes');
+  if (!div || div.children.length > 0) return;
+
+  // Botão "Todos os meses"
+  const btnTodos = document.createElement('button');
+  btnTodos.className = 'filtro-btn active';
+  btnTodos.textContent = 'Todos os meses';
+  btnTodos.onclick = () => {
+    document.querySelectorAll('#filtrosMes .filtro-btn').forEach(b=>b.classList.remove('active'));
+    btnTodos.classList.add('active');
+    filtroCalMes = -1;
+    renderCal();
+  };
+  div.appendChild(btnTodos);
+
+  // Botão por mês
+  MESES.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'filtro-btn';
+    btn.textContent = m;
+    btn.onclick = () => {
+      document.querySelectorAll('#filtrosMes .filtro-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      filtroCalMes = i;
+      renderCal();
+    };
+    div.appendChild(btn);
+  });
+}
+
 // CALENDÁRIO
 function renderCal() {
   const grid = document.getElementById('calGrid');
-  grid.innerHTML = `<div class="cal-head"></div>`;
-  MESES.forEach(m => { grid.innerHTML += `<div class="cal-head">${m}</div>`; });
+  const anoSel = parseInt(document.getElementById('calAno')?.value || 2026);
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
 
-  const comFerias = DADOS.filter(d => d.inicio && d.fim);
+  // Definir quais meses exibir
+  const mesesVisiveis = filtroCalMes === -1
+    ? [0,1,2,3,4,5,6,7,8,9,10,11]
+    : [filtroCalMes];
+
+  const nCols = mesesVisiveis.length;
+  grid.style.gridTemplateColumns = `190px repeat(${nCols}, 1fr)`;
+
+  grid.innerHTML = `<div class="cal-head"></div>`;
+  mesesVisiveis.forEach(i => {
+    const isHoje = (i === mesAtual && anoSel === anoAtual);
+    grid.innerHTML += `<div class="cal-head" style="${isHoje ? 'color:var(--teal);font-weight:800;' : ''}">${MESES[i]}${isHoje ? ' ◀' : ''}</div>`;
+  });
+
+  // Filtrar por time se necessário
+  let dadosFiltrados = DADOS;
+  if (filtroCalTime !== 'TODOS') {
+    dadosFiltrados = DADOS.filter(d => d.time === filtroCalTime);
+  }
+
+  // Pegar todos com início/fim OU com agendamento (texto)
+  // Para o calendário, mostrar qualquer registro que tenha datas no ano selecionado
+  const comFerias = dadosFiltrados.filter(d => d.inicio && d.fim);
   const nomes = [...new Set(comFerias.map(d=>d.nome))];
 
-  if (!nomes.length) {
-    grid.innerHTML += `<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);font-size:13px;background:#fff;">Nenhuma férias com datas cadastradas ainda.</div>`;
+  // Também incluir quem tem só agendamento (sem datas precisas) — mostrar no mês da data limite
+  const semDatas = dadosFiltrados.filter(d => (!d.inicio || !d.fim) && d.limite);
+  const nomesSemDatas = [...new Set(semDatas.map(d=>d.nome))].filter(n => !nomes.includes(n));
+
+  if (!nomes.length && !nomesSemDatas.length) {
+    grid.innerHTML += `<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);font-size:13px;background:#fff;">Nenhuma férias cadastrada com datas para este filtro.</div>`;
     return;
   }
 
-  nomes.forEach(nome => {
+  // Renderizar colaboradores COM datas
+  // Se mês filtrado: mostrar SOMENTE quem tem férias naquele mês
+  const nomesVisiveis = filtroCalMes === -1
+    ? nomes
+    : nomes.filter(nome => {
+        const regs = comFerias.filter(d=>d.nome===nome);
+        return regs.some(r => {
+          const ini = new Date(r.inicio+'T12:00:00');
+          return ini.getMonth() === filtroCalMes && ini.getFullYear() === anoSel;
+        });
+      });
+
+  if (!nomesVisiveis.length && !nomesSemDatas.length) {
+    grid.innerHTML += `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-size:13px;background:#fff;">
+      Nenhuma férias agendada para ${filtroCalMes === -1 ? 'este período' : MESES[filtroCalMes]}.
+    </div>`;
+    return;
+  }
+
+  nomesVisiveis.forEach(nome => {
     const registros = comFerias.filter(d=>d.nome===nome);
     const time = registros[0]?.time||'GUILHERME';
-    const cor = (TIMES[time]||{cor:'#888'}).cor;
+    const tc = TIMES[time]||{cor:'#888',label:time};
     grid.innerHTML += `
     <div class="cal-name-cell">
-      <div class="cal-team-dot" style="background:${cor}"></div>
-      <span>${primeiroNome(nome)}</span>
+      <div class="cal-team-dot" style="background:${tc.cor}"></div>
+      <div>
+        <div style="font-size:12px;font-weight:500">${primeiroNome(nome)}</div>
+        <div style="font-size:10px;color:${tc.cor};font-weight:600">${tc.label}</div>
+      </div>
     </div>`;
-    for (let mes=0; mes<12; mes++) {
+
+    mesesVisiveis.forEach(mes => {
       const lan = registros.find(r => {
-        if (!r.inicio||!r.fim) return false;
-        const im = new Date(r.inicio+'T12:00:00').getMonth();
-        const fm = new Date(r.fim+'T12:00:00').getMonth();
-        const iy = new Date(r.inicio+'T12:00:00').getFullYear();
-        return mes>=im && mes<=fm && iy===2026;
+        const ini = new Date(r.inicio+'T12:00:00');
+        return ini.getMonth() === mes && ini.getFullYear() === anoSel;
       });
+
       if (lan) {
         const di = new Date(lan.inicio+'T12:00:00');
         const df = new Date(lan.fim+'T12:00:00');
+        const dStr = `${di.getDate().toString().padStart(2,'0')}/${(di.getMonth()+1).toString().padStart(2,'0')}`;
+        const fStr = `${df.getDate().toString().padStart(2,'0')}/${(df.getMonth()+1).toString().padStart(2,'0')}`;
+        const label = `${dStr} a ${fStr}`;
         grid.innerHTML += `
-        <div class="cal-cell">
-          <div class="cal-bar" style="background:${cor}">${di.getDate()}/${mes+1}–${df.getDate()}/${df.getMonth()+1}</div>
+        <div class="cal-cell" title="${label}">
+          <div class="cal-bar" style="background:${tc.cor}">${label}</div>
         </div>`;
       } else {
         grid.innerHTML += `<div class="cal-cell"></div>`;
       }
-    }
+    });
+  });
+
+  // Renderizar colaboradores SEM datas — só se tiverem vencimento no mês filtrado
+  const nomesSemDatasVisiveis = filtroCalMes === -1
+    ? nomesSemDatas
+    : nomesSemDatas.filter(nome => {
+        const regs = semDatas.filter(d=>d.nome===nome);
+        return regs.some(r => {
+          if (!r.limite) return false;
+          const lim = new Date(r.limite+'T12:00:00');
+          return lim.getMonth() === filtroCalMes && lim.getFullYear() === anoSel;
+        });
+      });
+
+  nomesSemDatasVisiveis.forEach(nome => {
+    const regs = semDatas.filter(d=>d.nome===nome);
+    const time = regs[0]?.time||'GUILHERME';
+    const tc = TIMES[time]||{cor:'#888',label:time};
+    grid.innerHTML += `
+    <div class="cal-name-cell">
+      <div class="cal-team-dot" style="background:${tc.cor};opacity:.5"></div>
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--muted)">${primeiroNome(nome)}</div>
+        <div style="font-size:10px;color:#bbb">sem datas</div>
+      </div>
+    </div>`;
+    mesesVisiveis.forEach(mes => {
+      const reg = regs.find(r => {
+        if (!r.limite) return false;
+        const lim = new Date(r.limite+'T12:00:00');
+        return lim.getMonth()===mes && lim.getFullYear()===anoSel;
+      });
+      if (reg) {
+        const lim = new Date(reg.limite+'T12:00:00');
+        grid.innerHTML += `
+        <div class="cal-cell" title="Vence: ${lim.toLocaleDateString('pt-BR')}">
+          <div class="cal-bar" style="background:${tc.cor}55;border:1px dashed ${tc.cor};color:${tc.cor}">⚠ vence</div>
+        </div>`;
+      } else {
+        grid.innerHTML += `<div class="cal-cell"></div>`;
+      }
+    });
   });
 }
 
