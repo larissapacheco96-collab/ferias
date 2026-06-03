@@ -90,10 +90,20 @@ tr:last-child td{border-bottom:none;}
 tbody tr:hover td{background:#fafbff;}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
 .badge-dot{width:6px;height:6px;border-radius:50%;}
-.saldo-row{display:flex;align-items:center;gap:10px;}
+.saldo-row{display:flex;align-items:center;gap:8px;}
 .saldo-bar{width:80px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
 .saldo-fill{height:100%;border-radius:3px;}
 .saldo-val{font-weight:700;font-size:13px;min-width:22px;}
+.saldo-block{display:flex;flex-direction:column;gap:5px;min-width:120px;}
+.saldo-bar-tri{width:100%;height:7px;background:#ececec;border-radius:4px;overflow:hidden;display:flex;}
+.saldo-seg{height:100%;transition:width .5s;}
+.saldo-seg.usado   {background:#ef4444cc;}
+.saldo-seg.agendado{background:#f59e0bcc;}
+.saldo-seg.restante{background:#22c55ecc;}
+.saldo-labels{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.slabel{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600;white-space:nowrap;}
+.slabel-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.slabel-val{font-size:12px;font-weight:700;}
 .status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
 .nome-col{font-weight:500;}
 
@@ -203,7 +213,16 @@ tbody tr:hover td{background:#fafbff;}
               <th>Colaborador</th>
               <th>Time</th>
               <th>Período</th>
-              <th>Saldo (dias)</th>
+              <th>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span>Saldo</span>
+          <div style="display:flex;gap:8px;font-weight:400;font-size:10px;color:#bbb;">
+            <span style="color:#ef4444">■ Usados</span>
+            <span style="color:#f59e0b">■ Agend.</span>
+            <span style="color:#22c55e">■ Disp.</span>
+          </div>
+        </div>
+      </th>
               <th>Data Limite</th>
               <th>Status</th>
               <th>Ações</th>
@@ -260,8 +279,8 @@ tbody tr:hover td{background:#fafbff;}
     </div>
     <div class="form-grid">
       <div class="form-row">
-        <label>Saldo (dias)</label>
-        <input type="number" id="fSaldo" min="0" max="30" placeholder="30">
+        <label>Saldo Base (dias) <span style="font-size:10px;color:#26a69a">⚡ automático</span></label>
+        <input type="number" id="fSaldo" min="0" max="30" placeholder="Auto (30 ou 20)" readonly style="background:#f8f9fc;color:#6b7080;cursor:not-allowed;">
       </div>
       <div class="form-row">
         <label>Data Limite</label>
@@ -409,7 +428,11 @@ function renderKPIs() {
 function renderAlertas() {
   const lista = document.getElementById('alertasLista');
   const alertas = DADOS
-    .filter(s => { const d=diasAte(s.limite); return d!==null && d<90 && d>0 && s.saldo>0; })
+    .filter(s => {
+      const d = diasAte(s.limite);
+      const cs = calcSaldo(s);
+      return d!==null && d<90 && d>0 && cs.restante>0;
+    })
     .sort((a,b)=>diasAte(a.limite)-diasAte(b.limite));
   lista.innerHTML = '';
   if (!alertas.length) {
@@ -428,7 +451,7 @@ function renderAlertas() {
       <div style="font-size:18px">${emoji}</div>
       <div>
         <div class="alerta-nome">${primeiroNome(a.nome)}</div>
-        <div class="alerta-desc">Time <strong>${(TIMES[a.time]||{label:a.time}).label}</strong> · Período ${a.periodo||'—'} · Limite: ${fmtDate(a.limite)} · ${a.saldo||0} dias de saldo</div>
+        <div class="alerta-desc">Time <strong>${(TIMES[a.time]||{label:a.time}).label}</strong> · Período ${a.periodo||'—'} · Limite: ${fmtDate(a.limite)} · <span style="color:#ef4444;font-weight:600">${calcSaldo(a).restante} dias disponíveis</span> de ${a.saldo||0}</div>
       </div>
       <div class="alerta-dias" style="color:${corD};background:${bgD}">Vence em ${d} dias</div>
     </div>`;
@@ -455,6 +478,58 @@ function renderFiltros() {
   });
 }
 
+// BASE DE DIAS POR COLABORADOR
+function baseDias(row) {
+  const vinte = ['GEOVANA','LARISSA','WALTER'];
+  // verifica se o nome contém algum dos nomes especiais
+  const nomeUpper = (row.nome||'').toUpperCase();
+  const timeUpper = (row.time||'').toUpperCase();
+  if (vinte.some(n => nomeUpper.includes(n) || timeUpper.includes(n))) return 20;
+  return 30;
+}
+
+// CÁLCULO DE SALDO
+function calcSaldo(row) {
+  const base   = baseDias(row);
+  const hoje   = new Date();
+  hoje.setHours(0,0,0,0);
+
+  // Buscar todos os lançamentos deste colaborador + período
+  const lancamentos = DADOS.filter(d =>
+    d.nome === row.nome &&
+    d.periodo === row.periodo &&
+    d.inicio && d.fim
+  );
+
+  let usado   = 0; // dias já fruídos (fim < hoje)
+  let agendado= 0; // dias futuros agendados (inicio >= hoje)
+
+  lancamentos.forEach(l => {
+    const ini = new Date(l.inicio + 'T12:00:00');
+    const fim = new Date(l.fim    + 'T12:00:00');
+    const dias = Math.max(0, Math.ceil((fim - ini) / (1000*60*60*24)) + 1);
+
+    if (fim < hoje) {
+      usado += dias;
+    } else if (ini >= hoje) {
+      agendado += dias;
+    } else {
+      // período em andamento: parte usada + parte futura
+      const usadoParcial = Math.ceil((hoje - ini) / (1000*60*60*24));
+      const futParcial   = Math.ceil((fim - hoje)  / (1000*60*60*24));
+      usado    += usadoParcial;
+      agendado += futParcial;
+    }
+  });
+
+  const restante = Math.max(0, base - usado - agendado);
+  const pctUsado    = base > 0 ? Math.min(100, Math.round((usado    / base) * 100)) : 0;
+  const pctAgendado = base > 0 ? Math.min(100 - pctUsado, Math.round((agendado / base) * 100)) : 0;
+  const pctRestante = Math.max(0, 100 - pctUsado - pctAgendado);
+
+  return { base, usado, agendado, restante, pctUsado, pctAgendado, pctRestante };
+}
+
 // TABELA
 function renderTabela(filtro='TODOS') {
   const tbody = document.getElementById('tabelaBody');
@@ -466,23 +541,36 @@ function renderTabela(filtro='TODOS') {
   tbody.innerHTML = '';
   dados.forEach(row => {
     const d   = diasAte(row.limite);
-    const pct = Math.round(((row.saldo||0)/30)*100);
     const tc  = TIMES[row.time]||{cor:'#888',bg:'#eee',label:row.time};
+    const s   = calcSaldo(row);
+
     let pill='', pillBg='', pillCor='';
-    if (d===null)  { pill='—';            pillBg='#f0f0f0'; pillCor='#888'; }
-    else if (d<0)  { pill='Vencido';      pillBg='#fef2f2'; pillCor='#ef4444'; }
-    else if (d<30) { pill=`⚠ ${d}d`;     pillBg='#fef2f2'; pillCor='#ef4444'; }
-    else if (d<90) { pill=`🟡 ${d}d`;    pillBg='#fefce8'; pillCor='#ca8a04'; }
-    else           { pill=`✓ ${d}d`;     pillBg='#f0fdf4'; pillCor='#16a34a'; }
+    if (d===null)  { pill='—';           pillBg='#f0f0f0'; pillCor='#888'; }
+    else if (d<0)  { pill='Vencido';     pillBg='#fef2f2'; pillCor='#ef4444'; }
+    else if (d<30) { pill=`⚠ ${d}d`;    pillBg='#fef2f2'; pillCor='#ef4444'; }
+    else if (d<90) { pill=`🟡 ${d}d`;   pillBg='#fefce8'; pillCor='#ca8a04'; }
+    else           { pill=`✓ ${d}d`;    pillBg='#f0fdf4'; pillCor='#16a34a'; }
+
+    // cor do saldo restante
+    const sCorNum = s.restante <= 5 ? '#ef4444' : s.restante <= 10 ? '#f59e0b' : tc.cor;
+
     tbody.innerHTML += `
     <tr>
       <td class="nome-col">${primeiroNome(row.nome)}</td>
       <td><span class="badge" style="background:${tc.bg};color:${tc.cor}"><span class="badge-dot" style="background:${tc.cor}"></span>${tc.label}</span></td>
       <td style="color:var(--muted)">${row.periodo||'—'}</td>
       <td>
-        <div class="saldo-row">
-          <div class="saldo-bar"><div class="saldo-fill" style="width:${Math.min(pct,100)}%;background:${tc.cor}"></div></div>
-          <span class="saldo-val" style="color:${tc.cor}">${row.saldo||0}</span>
+        <div class="saldo-block">
+          <div class="saldo-bar-tri" title="Usados: ${s.usado}d | Agendados: ${s.agendado}d | Disponíveis: ${s.restante}d">
+            <div class="saldo-seg usado"    style="width:${s.pctUsado}%"></div>
+            <div class="saldo-seg agendado" style="width:${s.pctAgendado}%"></div>
+            <div class="saldo-seg restante" style="width:${s.pctRestante}%"></div>
+          </div>
+          <div class="saldo-labels">
+            <span class="slabel"><span class="slabel-dot" style="background:#ef4444"></span><span style="color:var(--muted);font-size:10px">Usados</span><span class="slabel-val" style="color:#ef4444">${s.usado}</span></span>
+            <span class="slabel"><span class="slabel-dot" style="background:#f59e0b"></span><span style="color:var(--muted);font-size:10px">Agend.</span><span class="slabel-val" style="color:#d97706">${s.agendado}</span></span>
+            <span class="slabel"><span class="slabel-dot" style="background:#22c55e"></span><span style="color:var(--muted);font-size:10px">Disp.</span><span class="slabel-val" style="color:${sCorNum}">${s.restante}</span></span>
+          </div>
         </div>
       </td>
       <td style="color:var(--muted)">${fmtDate(row.limite)}</td>
@@ -560,7 +648,9 @@ function abrirModal(id=null) {
       document.getElementById('fNome').value        = r.nome||'';
       document.getElementById('fTime').value        = r.time||'FERNANDA';
       document.getElementById('fPeriodo').value     = r.periodo||'';
-      document.getElementById('fSaldo').value       = r.saldo||'';
+      const vinte20 = ['GEOVANA','LARISSA','WALTER'];
+      const baseEdit = vinte20.some(n => (r.nome||'').toUpperCase().includes(n)) ? 20 : 30;
+      document.getElementById('fSaldo').value       = baseEdit;
       document.getElementById('fLimite').value      = r.limite||'';
       document.getElementById('fInicio').value      = r.inicio||'';
       document.getElementById('fFim').value         = r.fim||'';
@@ -589,11 +679,15 @@ async function salvarRegistro() {
   const time = document.getElementById('fTime').value;
   if (!nome || !time) { showToast('Preencha pelo menos nome e time.', 'error'); return; }
 
+  // Base automática: 20 para Geovana, Larissa e Walter; 30 para demais
+  const vinte = ['GEOVANA','LARISSA','WALTER'];
+  const baseAuto = vinte.some(n => nome.includes(n)) ? 20 : 30;
+
   const dados = {
     nome,
     time,
     periodo:     document.getElementById('fPeriodo').value.trim(),
-    saldo:       parseInt(document.getElementById('fSaldo').value)||0,
+    saldo:       baseAuto,
     limite:      document.getElementById('fLimite').value||null,
     inicio:      document.getElementById('fInicio').value||null,
     fim:         document.getElementById('fFim').value||null,
