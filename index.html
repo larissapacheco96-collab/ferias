@@ -480,12 +480,11 @@ function renderFiltros() {
 }
 
 // BASE DE DIAS POR COLABORADOR
+// 20 dias: Geovana, Larissa Pacheco e Walter
 function baseDias(row) {
-  const vinte = ['GEOVANA','LARISSA','WALTER'];
-  // verifica se o nome contém algum dos nomes especiais
+  const vinte = ['GEOVANA','PACHECO','WALTER'];
   const nomeUpper = (row.nome||'').toUpperCase();
-  const timeUpper = (row.time||'').toUpperCase();
-  if (vinte.some(n => nomeUpper.includes(n) || timeUpper.includes(n))) return 20;
+  if (vinte.some(n => nomeUpper.includes(n))) return 20;
   return 30;
 }
 
@@ -649,7 +648,7 @@ function abrirModal(id=null) {
       document.getElementById('fNome').value        = r.nome||'';
       document.getElementById('fTime').value        = r.time||'FERNANDA';
       document.getElementById('fPeriodo').value     = r.periodo||'';
-      const vinte20 = ['GEOVANA','LARISSA','WALTER'];
+      const vinte20 = ['GEOVANA','PACHECO','WALTER'];
       const baseEdit = vinte20.some(n => (r.nome||'').toUpperCase().includes(n)) ? 20 : 30;
       document.getElementById('fSaldo').value       = baseEdit;
       document.getElementById('fLimite').value      = r.limite||'';
@@ -680,8 +679,8 @@ async function salvarRegistro() {
   const time = document.getElementById('fTime').value;
   if (!nome || !time) { showToast('Preencha pelo menos nome e time.', 'error'); return; }
 
-  // Base automática: 20 para Geovana, Larissa e Walter; 30 para demais
-  const vinte = ['GEOVANA','LARISSA','WALTER'];
+  // Base automática: 20 para Geovana, Pacheco e Walter; 30 para demais
+  const vinte = ['GEOVANA','PACHECO','WALTER'];
   const baseAuto = vinte.some(n => nome.includes(n)) ? 20 : 30;
 
   const dados = {
