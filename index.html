@@ -413,6 +413,37 @@ function showToast(msg, err){
   clearTimeout(_tt); _tt = setTimeout(function(){t.classList.remove("on");},3000);
 }
 window.showToast = showToast;
+// ── EVENT DELEGATION (runs after module loads) ──
+document.addEventListener("click", function(e) {
+  var el = e.target.closest("[data-goto]");
+  if(el) { window.showTab(el.dataset.goto); return; }
+
+  el = e.target.closest("[data-action='novo']");
+  if(el) { window.abrirModal(); return; }
+
+  el = e.target.closest("[data-action='fechar']");
+  if(el) { window.fecharModal(); return; }
+
+  el = e.target.closest("[data-action='salvar']");
+  if(el) { window.salvarModal(); return; }
+
+  el = e.target.closest("[data-calyear]");
+  if(el) { window.chCalYear(parseInt(el.dataset.calyear)); return; }
+
+  el = e.target.closest("[data-calmonth]");
+  if(el) { window.chCalMonth(parseInt(el.dataset.calmonth)); return; }
+});
+
+// Modal background click
+document.getElementById("modalBg").addEventListener("click", function(e) {
+  if(e.target === this) window.fecharModal();
+});
+
+// btnDel
+document.getElementById("btnDel").addEventListener("click", function() {
+  window.confirmarDelete();
+});
+
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -555,9 +586,9 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
   </div>
 </div>
 <div class="tabs">
-  <button class="tab-btn on" data-tab="dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
-  <button class="tab-btn" data-tab="registros" onclick="showTab('registros')">📋 Registros</button>
-  <button class="tab-btn" data-tab="calendario" onclick="showTab('calendario')">📅 Calendário</button>
+  <button class="tab-btn on" data-tab="dashboard" data-goto="dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="registros" data-goto="registros">📋 Registros</button>
+  <button class="tab-btn" data-tab="calendario" data-goto="calendario">📅 Calendário</button>
 </div>
 <div class="main">
 
@@ -565,7 +596,7 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
   <div class="tab-view on" id="view-dashboard">
     <div class="top-bar">
       <h2>Visão Geral</h2>
-      <button class="btn-novo" onclick="abrirModal()">+ Novo Colaborador</button>
+      <button class="btn-novo" data-action="novo">+ Novo Colaborador</button>
     </div>
     <div class="alertas-box">
       <div class="alertas-title">⚠️ Alertas de Vencimento</div>
@@ -578,7 +609,7 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
   <div class="tab-view" id="view-registros">
     <div class="top-bar">
       <h2>Registros de Férias</h2>
-      <button class="btn-novo" onclick="abrirModal()">+ Novo Colaborador</button>
+      <button class="btn-novo" data-action="novo">+ Novo Colaborador</button>
     </div>
     <div class="reg-table-wrap">
       <table>
@@ -600,11 +631,11 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
   <!-- CALENDÁRIO -->
   <div class="tab-view" id="view-calendario">
     <div class="cal-nav">
-      <button class="cal-nav-btn" onclick="chCalYear(-1)">«</button>
-      <button class="cal-nav-btn" onclick="chCalMonth(-1)">‹</button>
+      <button class="cal-nav-btn" data-calyear="-1">«</button>
+      <button class="cal-nav-btn" data-calmonth="-1">‹</button>
       <div class="cal-label" id="calLabel"></div>
-      <button class="cal-nav-btn" onclick="chCalMonth(1)">›</button>
-      <button class="cal-nav-btn" onclick="chCalYear(1)">»</button>
+      <button class="cal-nav-btn" data-calmonth="1">›</button>
+      <button class="cal-nav-btn" data-calyear="1">»</button>
     </div>
     <div class="cal-grid" id="calGrid"></div>
   </div>
@@ -612,7 +643,7 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
 </div>
 
 <!-- MODAL COLABORADOR -->
-<div class="modal-bg" id="modal" onclick="if(event.target===this)fecharModal()">
+<div class="modal-bg" id="modal" id="modalBg">
   <div class="modal">
     <h3 id="modalTitle">Novo Colaborador</h3>
     <input type="hidden" id="modalId">
@@ -635,9 +666,9 @@ td{padding:10px 14px;border-bottom:1px solid var(--tl);vertical-align:top;}
     <label>Data Limite para Gozo</label>
     <input type="date" id="modalDataLimite">
     <div class="modal-footer">
-      <button class="btn-danger" id="btnDel" onclick="confirmarDelete()" style="display:none">🗑 Excluir</button>
-      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-save" onclick="salvarModal()">Salvar</button>
+      <button class="btn-danger" id="btnDel" id="btnDel" style="display:none">🗑 Excluir</button>
+      <button class="btn-cancel" data-action="fechar">Cancelar</button>
+      <button class="btn-save" data-action="salvar">Salvar</button>
     </div>
   </div>
 </div>
