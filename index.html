@@ -4,197 +4,152 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controle de Férias · Tributário OBDC</title>
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<!-- Tabler Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
-
 <style>
-  :root {
-    --bg: #f6f5f3;
-    --surface: #ffffff;
-    --surface2: #f0eeeb;
-    --border: #e2e0dc;
-    --border2: #cccac5;
-    --text: #1a1917;
-    --text2: #6b6965;
-    --text3: #9e9b97;
-    --accent: #2563eb;
-    --accent-light: #eff6ff;
-    --accent-text: #1d4ed8;
-    --green: #16a34a;
-    --green-light: #f0fdf4;
-    --green-text: #15803d;
-    --amber: #d97706;
-    --amber-light: #fffbeb;
-    --amber-text: #92400e;
-    --red: #dc2626;
-    --red-light: #fef2f2;
-    --red-text: #991b1b;
-    --gray-light: #f1f0ee;
-    --gray-text: #6b6965;
-    --radius: 8px;
-    --radius-lg: 12px;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
-
-  /* LAYOUT */
-  .app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-  .app-header .logo { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-  .app-header .logo span { color: var(--text2); font-weight: 400; }
-  .header-actions { display: flex; align-items: center; gap: 8px; }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .sync-label { font-size: 12px; color: var(--green-text); }
-
-  .page { max-width: 1200px; margin: 0 auto; padding: 24px 24px 80px; }
-
-  /* STATS */
-  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 24px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
-  .stat-num { font-size: 28px; font-weight: 700; line-height: 1; }
-  .stat-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
-  .stat-card.red .stat-num { color: var(--red); }
-  .stat-card.amber .stat-num { color: var(--amber); }
-  .stat-card.green .stat-num { color: var(--green); }
-  .stat-card.blue .stat-num { color: var(--accent); }
-
-  /* TOOLBAR */
-  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .toolbar input[type=text], .toolbar select { height: 36px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: 13px; padding: 0 10px; outline: none; }
-  .toolbar input[type=text] { min-width: 220px; }
-  .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-  .btn { height: 36px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .15s; white-space: nowrap; }
-  .btn:hover { background: var(--surface2); }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn.primary:hover { background: var(--accent-text); }
-  .btn.danger { background: var(--red-light); color: var(--red-text); border-color: #fca5a5; }
-  .btn.danger:hover { background: #fee2e2; }
-  .btn.success { background: var(--green-light); color: var(--green-text); border-color: #86efac; }
-  .btn.success:hover { background: #dcfce7; }
-  .ml-auto { margin-left: auto; }
-
-  /* TABLE */
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  tbody tr { transition: background .1s; }
-  tbody tr:hover { background: #fafaf9; }
-  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  tbody tr:last-child td { border-bottom: none; }
-
-  .name-cell .name { font-weight: 600; font-size: 13px; }
-  .name-cell .sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-
-  /* SALDO BAR */
-  .saldo-wrap { min-width: 130px; }
-  .saldo-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-  .saldo-num { font-size: 14px; font-weight: 700; }
-  .saldo-agend { font-size: 11px; color: var(--amber); font-weight: 500; }
-  .saldo-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-  .saldo-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
-  .saldo-bar-used { height: 6px; background: var(--amber-light); border-radius: 3px; overflow: hidden; margin-top: 2px; }
-  .saldo-bar-used-fill { height: 100%; border-radius: 3px; background: var(--amber); transition: width .4s; }
-  .saldo-remaining { font-size: 11px; color: var(--text3); margin-top: 3px; }
-
-  /* PILLS */
-  .pill { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-  .pill.red { background: var(--red-light); color: var(--red-text); }
-  .pill.amber { background: var(--amber-light); color: var(--amber-text); }
-  .pill.green { background: var(--green-light); color: var(--green-text); }
-  .pill.gray { background: var(--gray-light); color: var(--gray-text); }
-  .pill.blue { background: var(--accent-light); color: var(--accent-text); }
-
-  .vinculo-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .03em; }
-  .vinculo-CLT { background: #e0f2fe; color: #0369a1; }
-  .vinculo-PJ { background: #ede9fe; color: #5b21b6; }
-  .vinculo-Estágio { background: #fdf2f8; color: #9d174d; }
-  .vinculo-Sócio { background: #ecfdf5; color: #065f46; }
-
-  /* FÉRIAS AGENDADAS */
-  .ferias-list { display: flex; flex-direction: column; gap: 3px; min-width: 180px; }
-  .ferias-item { display: flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 7px; background: var(--amber-light); border-radius: 4px; color: var(--amber-text); border: 1px solid #fde68a; }
-  .ferias-item.confirmed { background: var(--green-light); color: var(--green-text); border-color: #86efac; }
-  .ferias-item .dias-badge { font-weight: 700; }
-  .ferias-empty { font-size: 12px; color: var(--text3); }
-
-  /* ACTIONS */
-  .actions { display: flex; gap: 4px; }
-  .icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; transition: all .15s; }
-  .icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
-  .icon-btn.red:hover { background: var(--red-light); color: var(--red-text); border-color: #fca5a5; }
-  .icon-btn.green:hover { background: var(--green-light); color: var(--green-text); border-color: #86efac; }
-  .icon-btn.blue:hover { background: var(--accent-light); color: var(--accent-text); border-color: #93c5fd; }
-
-  /* MODAL */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
-  .overlay.open { opacity: 1; pointer-events: all; }
-  .modal { background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,.15); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; transform: translateY(8px); transition: transform .2s; }
-  .overlay.open .modal { transform: translateY(0); }
-  .modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
-  .modal-title { font-size: 16px; font-weight: 700; }
-  .modal-body { padding: 20px 24px; }
-  .modal-footer { padding: 0 24px 20px; display: flex; gap: 8px; justify-content: flex-end; }
-
-  .form-group { margin-bottom: 14px; }
-  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; }
-  .form-input { width: 100%; height: 36px; border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 10px; font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
-  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .form-select { width: 100%; height: 36px; border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 10px; font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
-  .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-
-  /* FÉRIAS AGENDADAS NO MODAL */
-  .agenda-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-  .agenda-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface2); border-radius: var(--radius); border: 1px solid var(--border); }
-  .agenda-item-dates { flex: 1; font-size: 12px; }
-  .agenda-item-dates .range { font-weight: 600; color: var(--text); }
-  .agenda-item-dates .dias { color: var(--text2); font-size: 11px; }
-  .agenda-confirm { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
-
-  /* TIMELINE */
-  .timeline-section { margin-top: 32px; }
-  .section-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--text); }
-  .timeline-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow-x: auto; padding: 20px 24px; }
-  .timeline-header { display: flex; margin-bottom: 8px; }
-  .timeline-name-col { width: 180px; min-width: 180px; font-size: 11px; font-weight: 600; color: var(--text3); }
-  .timeline-months { flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
-  .timeline-month-label { font-size: 10px; font-weight: 600; color: var(--text3); text-align: center; }
-  .timeline-row { display: flex; align-items: center; margin-bottom: 8px; }
-  .timeline-row-name { width: 180px; min-width: 180px; font-size: 12px; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px; }
-  .timeline-bar-area { flex: 1; height: 22px; position: relative; background: var(--surface2); border-radius: 3px; }
-  .timeline-block { position: absolute; height: 100%; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: opacity .2s; cursor: default; }
-  .timeline-block:hover { opacity: .8; }
-
-  /* EMPTY */
-  .empty-state { text-align: center; padding: 48px 20px; color: var(--text2); }
-  .empty-state i { font-size: 40px; color: var(--text3); margin-bottom: 12px; display: block; }
-
-  /* TOAST */
-  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
-  .toast { background: var(--text); color: #fff; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; box-shadow: var(--shadow); animation: slideIn .2s ease; }
-  @keyframes slideIn { from{transform:translateX(40px);opacity:0} to{transform:none;opacity:1} }
-
-  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-  /* PERIODOS VENCIDOS NO MODAL */
-  .periodos-section { margin-top: 8px; }
-  .periodo-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-  .periodo-row:last-child { border-bottom: none; }
-
-  @media (max-width: 768px) {
-    .page { padding: 16px 12px 80px; }
-    .app-header { padding: 0 16px; }
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .form-row { grid-template-columns: 1fr; }
-    .timeline-section { display: none; }
-  }
+:root{--bg:#f6f5f3;--surface:#fff;--surface2:#f0eeeb;--border:#e2e0dc;--border2:#cccac5;--text:#1a1917;--text2:#6b6965;--text3:#9e9b97;--accent:#2563eb;--accent-light:#eff6ff;--accent-text:#1d4ed8;--green:#16a34a;--green-light:#f0fdf4;--green-text:#15803d;--amber:#d97706;--amber-light:#fffbeb;--amber-text:#92400e;--red:#dc2626;--red-light:#fef2f2;--red-text:#991b1b;--gray-light:#f1f0ee;--gray-text:#6b6965;--radius:8px;--radius-lg:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+/* HEADER */
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px}
+.header-actions{display:flex;align-items:center;gap:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-label{font-size:12px;color:var(--green-text)}
+/* TABS */
+.tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0}
+.tab-btn{height:44px;padding:0 18px;border:none;background:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:all .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+/* PAGE */
+.page{max-width:1200px;margin:0 auto;padding:24px 24px 80px}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.stat-num{font-size:28px;font-weight:700;line-height:1}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.stat-card.red .stat-num{color:var(--red)}.stat-card.amber .stat-num{color:var(--amber)}.stat-card.green .stat-num{color:var(--green)}.stat-card.blue .stat-num{color:var(--accent)}
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar input[type=text],.toolbar select{height:36px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;padding:0 10px;outline:none}
+.toolbar input[type=text]{min-width:220px}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.btn{height:36px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap}
+.btn:hover{background:var(--surface2)}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.primary:hover{background:var(--accent-text)}
+.btn.danger{background:var(--red-light);color:var(--red-text);border-color:#fca5a5}.btn.danger:hover{background:#fee2e2}
+.btn.success{background:var(--green-light);color:var(--green-text);border-color:#86efac}.btn.success:hover{background:#dcfce7}
+.ml-auto{margin-left:auto}
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{transition:background .1s}tbody tr:hover{background:#fafaf9}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+.name-cell .name{font-weight:600;font-size:13px}.name-cell .sub{font-size:12px;color:var(--text2);margin-top:1px}
+/* SALDO BAR */
+.saldo-wrap{min-width:130px}
+.saldo-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.saldo-num{font-size:14px;font-weight:700}.saldo-agend{font-size:11px;color:var(--amber);font-weight:500}
+.saldo-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.saldo-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.saldo-bar-used{height:6px;background:var(--amber-light);border-radius:3px;overflow:hidden;margin-top:2px}
+.saldo-bar-used-fill{height:100%;border-radius:3px;background:var(--amber);transition:width .4s}
+.saldo-remaining{font-size:11px;color:var(--text3);margin-top:3px}
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.pill.red{background:var(--red-light);color:var(--red-text)}.pill.amber{background:var(--amber-light);color:var(--amber-text)}
+.pill.green{background:var(--green-light);color:var(--green-text)}.pill.gray{background:var(--gray-light);color:var(--gray-text)}
+.pill.blue{background:var(--accent-light);color:var(--accent-text)}
+.vinculo-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.03em}
+.vinculo-CLT{background:#e0f2fe;color:#0369a1}.vinculo-PJ{background:#ede9fe;color:#5b21b6}
+.vinculo-Estágio{background:#fdf2f8;color:#9d174d}.vinculo-Sócio{background:#ecfdf5;color:#065f46}
+/* FÉRIAS AGENDADAS */
+.ferias-list{display:flex;flex-direction:column;gap:3px;min-width:180px}
+.ferias-item{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 7px;background:var(--amber-light);border-radius:4px;color:var(--amber-text);border:1px solid #fde68a}
+.ferias-item.confirmed{background:var(--green-light);color:var(--green-text);border-color:#86efac}
+.ferias-item .dias-badge{font-weight:700}.ferias-empty{font-size:12px;color:var(--text3)}
+/* ACTIONS */
+.actions{display:flex;gap:4px}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+.icon-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.icon-btn.red:hover{background:var(--red-light);color:var(--red-text);border-color:#fca5a5}
+.icon-btn.blue:hover{background:var(--accent-light);color:var(--accent-text);border-color:#93c5fd}
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:0 20px 60px rgba(0,0,0,.15);width:100%;max-width:540px;max-height:90vh;overflow-y:auto;transform:translateY(8px);transition:transform .2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700}
+.modal-body{padding:20px 24px}.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block}
+.form-input{width:100%;height:36px;border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-select{width:100%;height:36px;border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none}
+.form-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+/* TIMELINE */
+.timeline-section{margin-top:32px}
+.section-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.timeline-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow-x:auto;padding:20px 24px}
+.timeline-header{display:flex;margin-bottom:8px}
+.timeline-name-col{width:180px;min-width:180px;font-size:11px;font-weight:600;color:var(--text3)}
+.timeline-months{flex:1;display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.timeline-month-label{font-size:10px;font-weight:600;color:var(--text3);text-align:center}
+.timeline-row{display:flex;align-items:center;margin-bottom:8px}
+.timeline-row-name{width:180px;min-width:180px;font-size:12px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px}
+.timeline-bar-area{flex:1;height:22px;position:relative;background:var(--surface2);border-radius:3px}
+.timeline-block{position:absolute;height:100%;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:default}
+.timeline-block:hover{opacity:.8}
+/* CALENDAR */
+.cal-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.cal-year-nav{display:flex;align-items:center;gap:12px}
+.cal-year{font-size:20px;font-weight:700;color:var(--text)}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.cal-month{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.cal-month-header{background:var(--surface2);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.cal-month-name{font-size:13px;font-weight:700;color:var(--text)}
+.cal-month-count{font-size:11px;color:var(--text2)}
+.cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:8px 10px 4px;background:var(--surface)}
+.cal-day-label{font-size:10px;font-weight:600;color:var(--text3);text-align:center}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 10px 10px}
+.cal-day{min-height:32px;border-radius:5px;padding:3px 4px;font-size:11px;position:relative;cursor:default;transition:background .1s}
+.cal-day.empty{background:transparent}
+.cal-day.today{outline:2px solid var(--accent);outline-offset:-1px}
+.cal-day.weekend{background:#faf9f8}
+.cal-day .day-num{font-weight:600;color:var(--text2);font-size:11px;line-height:1;margin-bottom:2px}
+.cal-day.has-ferias{background:var(--accent-light)}
+.cal-day.has-ferias .day-num{color:var(--accent-text)}
+.cal-day.has-ferias.confirmed{background:var(--green-light)}
+.cal-day.has-ferias.confirmed .day-num{color:var(--green-text)}
+.cal-day.has-ferias.mixed{background:#fef9ec}
+.cal-day.has-ferias.mixed .day-num{color:var(--amber-text)}
+.cal-day-people{display:flex;flex-direction:column;gap:1px;margin-top:2px}
+.cal-person-dot{font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.cal-dot-pending{background:var(--amber-light);color:var(--amber-text)}
+.cal-dot-confirmed{background:var(--green-light);color:var(--green-text)}
+.cal-more{font-size:9px;color:var(--text3);margin-top:1px}
+.cal-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.cal-legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.cal-legend-dot{width:12px;height:12px;border-radius:3px}
+/* EMPTY */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-state i{font-size:40px;color:var(--text3);margin-bottom:12px;display:block}
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;animation:slideIn .2s ease}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+@media(max-width:768px){
+  .page{padding:16px 12px 80px}.app-header{padding:0 16px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}
+  .cal-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -202,66 +157,81 @@
 <div class="app-header">
   <div class="logo" style="gap:10px">
     <img src="data:image/png;base64,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" alt="OBDC" style="height:26px;object-fit:contain">
-    <div style="width:1px;height:22px;background:var(--border);"></div>
+    <div style="width:1px;height:22px;background:var(--border)"></div>
     <span style="font-size:14px;font-weight:500;color:var(--text2)">Controle de Férias · Tributário</span>
   </div>
   <div class="header-actions">
     <span class="sync-dot" id="syncDot"></span>
     <span class="sync-label" id="syncLabel">Conectando...</span>
-    <button class="btn primary" onclick="openModalColaborador()">
-      <i class="ti ti-plus"></i> Colaborador
-    </button>
+    <button class="btn primary" onclick="openModalColaborador()"><i class="ti ti-plus"></i> Colaborador</button>
   </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab-btn active" id="tab-lista" onclick="switchTab('lista')"><i class="ti ti-list"></i> Lista</button>
+  <button class="tab-btn" id="tab-calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i> Calendário</button>
+  <button class="tab-btn" id="tab-timeline" onclick="switchTab('timeline')"><i class="ti ti-chart-gantt"></i> Timeline</button>
 </div>
 
 <div class="page">
 
-  <!-- STATS -->
+  <!-- STATS (sempre visível) -->
   <div class="stats-row" id="statsRow"></div>
 
-  <!-- TOOLBAR -->
-  <div class="toolbar">
-    <input type="text" id="searchInput" placeholder="🔍  Buscar colaborador..." oninput="render()">
-    <select id="filtStatus" onchange="render()">
-      <option value="">Todos os status</option>
-      <option value="vencido">Vencido</option>
-      <option value="atencao">Atenção (até 90 dias)</option>
-      <option value="em_dia">Em dia</option>
-      <option value="sem_saldo">Sem saldo</option>
-    </select>
-    <select id="filtCargo" onchange="render()">
-      <option value="">Todos os cargos</option>
-    </select>
-    <button class="btn ml-auto" onclick="toggleTimeline()">
-      <i class="ti ti-calendar-stats"></i> Timeline
-    </button>
-  </div>
-
-  <!-- TABLE -->
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Colaborador</th>
-          <th>Cargo / Vínculo</th>
-          <th>Saldo de dias</th>
-          <th>Férias agendadas</th>
-          <th>Período concessivo</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState" style="display:none">
-      <i class="ti ti-mood-empty"></i>
-      Nenhum colaborador encontrado.
+  <!-- ABA: LISTA -->
+  <div class="tab-panel active" id="panel-lista">
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="🔍  Buscar colaborador..." oninput="render()">
+      <select id="filtStatus" onchange="render()">
+        <option value="">Todos os status</option>
+        <option value="vencido">Vencido</option>
+        <option value="atencao">Atenção (até 90 dias)</option>
+        <option value="em_dia">Em dia</option>
+        <option value="sem_saldo">Sem saldo</option>
+      </select>
+      <select id="filtCargo" onchange="render()">
+        <option value="">Todos os cargos</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Colaborador</th><th>Cargo / Vínculo</th><th>Saldo de dias</th>
+          <th>Férias agendadas</th><th>Período concessivo</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <i class="ti ti-mood-empty"></i>Nenhum colaborador encontrado.
+      </div>
     </div>
   </div>
 
-  <!-- TIMELINE -->
-  <div class="timeline-section" id="timelineSection" style="display:none">
-    <div class="section-title"><i class="ti ti-calendar-event"></i> Timeline de férias agendadas</div>
+  <!-- ABA: CALENDÁRIO -->
+  <div class="tab-panel" id="panel-calendario">
+    <div class="cal-controls">
+      <div class="cal-year-nav">
+        <button class="btn" onclick="calYear--;renderCalendario()"><i class="ti ti-chevron-left"></i></button>
+        <span class="cal-year" id="calYearLabel">2026</span>
+        <button class="btn" onclick="calYear++;renderCalendario()"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green-light);border:1px solid #86efac"></div> Confirmado</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--amber-light);border:1px solid #fde68a"></div> Aguardando</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fef9ec;border:1px solid #fde68a"></div> Misto</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="outline:2px solid var(--accent);outline-offset:-1px;border-radius:3px"></div> Hoje</div>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- ABA: TIMELINE -->
+  <div class="tab-panel" id="panel-timeline">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <button class="btn" onclick="tlYear--;renderTimeline()"><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:16px;font-weight:700" id="tlYearLabel">2026</span>
+      <button class="btn" onclick="tlYear++;renderTimeline()"><i class="ti ti-chevron-right"></i></button>
+    </div>
     <div class="timeline-wrap" id="timelineWrap"></div>
   </div>
 
@@ -269,56 +239,28 @@
 
 <!-- MODAL COLABORADOR -->
 <div class="overlay" id="modalOverlay" onclick="closeModalIfOutside(event)">
-  <div class="modal" id="colabModal">
+  <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="modalTitle">Novo colaborador</div>
       <button class="icon-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Nome completo *</label>
-          <input type="text" class="form-input" id="f_nome" placeholder="Nome completo">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Cargo *</label>
-          <input type="text" class="form-input" id="f_cargo" placeholder="Ex: Analista Fiscal PL">
-        </div>
+        <div class="form-group"><label class="form-label">Nome completo *</label><input type="text" class="form-input" id="f_nome" placeholder="Nome completo"></div>
+        <div class="form-group"><label class="form-label">Cargo *</label><input type="text" class="form-input" id="f_cargo" placeholder="Ex: Analista Fiscal PL"></div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Vínculo</label>
-          <select class="form-select" id="f_vinculo">
-            <option>CLT</option>
-            <option>PJ</option>
-            <option>Estágio</option>
-            <option>Sócio</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Data de admissão</label>
-          <input type="date" class="form-input" id="f_admissao">
-        </div>
+        <div class="form-group"><label class="form-label">Vínculo</label><select class="form-select" id="f_vinculo"><option>CLT</option><option>PJ</option><option>Estágio</option><option>Sócio</option></select></div>
+        <div class="form-group"><label class="form-label">Data de admissão</label><input type="date" class="form-input" id="f_admissao"></div>
       </div>
-
       <hr class="divider">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">Períodos de férias e saldos</div>
-
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Períodos de férias e saldos</div>
       <div id="periodosContainer"></div>
-      <button class="btn" onclick="addPeriodo()" style="width:100%;justify-content:center;margin-top:4px">
-        <i class="ti ti-plus"></i> Adicionar período aquisitivo
-      </button>
-
+      <button class="btn" onclick="addPeriodo()" style="width:100%;justify-content:center;margin-top:4px"><i class="ti ti-plus"></i> Adicionar período aquisitivo</button>
       <hr class="divider">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">
-        <i class="ti ti-calendar-plus" style="margin-right:4px"></i> Agendar férias
-      </div>
-
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px"><i class="ti ti-calendar-plus" style="margin-right:4px"></i> Agendar férias</div>
       <div id="agendaContainer"></div>
-      <button class="btn success" onclick="addAgenda()" style="width:100%;justify-content:center;margin-top:4px">
-        <i class="ti ti-plus"></i> Adicionar período de férias
-      </button>
-
+      <button class="btn success" onclick="addAgenda()" style="width:100%;justify-content:center;margin-top:4px"><i class="ti ti-plus"></i> Adicionar período de férias</button>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -327,11 +269,11 @@
   </div>
 </div>
 
-<!-- MODAL CONFIRMAR EXCLUSÃO -->
+<!-- MODAL EXCLUIR -->
 <div class="overlay" id="deleteOverlay" onclick="closeDeleteIfOutside(event)">
   <div class="modal" style="max-width:380px">
     <div class="modal-header"><div class="modal-title">Remover colaborador</div><button class="icon-btn" onclick="closeDelete()"><i class="ti ti-x"></i></button></div>
-    <div class="modal-body"><p style="color:var(--text2);font-size:13px">Tem certeza que deseja remover <strong id="deleteNome"></strong>? Esta ação não pode ser desfeita.</p></div>
+    <div class="modal-body"><p style="color:var(--text2);font-size:13px">Tem certeza que deseja remover <strong id="deleteNome"></strong>?</p></div>
     <div class="modal-footer"><button class="btn" onclick="closeDelete()">Cancelar</button><button class="btn danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> Remover</button></div>
   </div>
 </div>
@@ -339,19 +281,17 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
-// INSTRUÇÃO: Substitua pelo seu projeto Firebase (veja README abaixo)
 const firebaseConfig = {
-  apiKey: "AIzaSyDemo_SUBSTITUA_AQUI",
-  authDomain: "seu-projeto.firebaseapp.com",
-  databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com",
-  projectId: "seu-projeto",
-  storageBucket: "seu-projeto.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:000000000000"
+  apiKey: "AIzaSyAUgos_F0fgtVIktaqbg_YRQEEVy8OSLMw",
+  authDomain: "ferias-d2994.firebaseapp.com",
+  databaseURL: "https://ferias-d2994-default-rtdb.firebaseio.com",
+  projectId: "ferias-d2994",
+  storageBucket: "ferias-d2994.firebasestorage.app",
+  messagingSenderId: "438767798721",
+  appId: "1:438767798721:web:b0dff5924fdd8b5cc70740",
+  measurementId: "G-41M12FRGVY"
 };
 
-// ─── DADOS INICIAIS (importados da planilha) ─────────────────────────────────
 const DADOS_INICIAIS = [
   {id:"ana-laura",nome:"Ana Laura Tavares De Oliveira",cargo:"Assistente Fiscal",vinculo:"CLT",admissao:"2025-07-01",periodos:[{inicio:"2025-07-01",fim:"2026-06-30",inicioConc:"2026-07-01",saldo:30}],agendadas:[]},
   {id:"bianca-menezes",nome:"Bianca Menezes Goncalves Silva",cargo:"Assistente Fiscal",vinculo:"CLT",admissao:"2024-11-19",periodos:[{inicio:"2025-11-19",fim:"2026-11-18",inicioConc:"2026-11-19",saldo:30}],agendadas:[]},
@@ -382,503 +322,291 @@ const DADOS_INICIAIS = [
   {id:"walter-guimaraes",nome:"Walter Guimaraes Silva Neto",cargo:"Analista Fiscal JR",vinculo:"PJ",admissao:"2026-04-27",periodos:[{inicio:"2026-04-27",fim:"2026-10-25",inicioConc:"2026-10-26",saldo:10}],agendadas:[]},
 ];
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
-let db = null;
-let colaboradores = {};
-let editingId = null;
-let deleteId = null;
-let timelineVisible = false;
-const TODAY = new Date();
-TODAY.setHours(0,0,0,0);
+let db=null, colaboradores={}, editingId=null, deleteId=null;
+let calYear=new Date().getFullYear(), tlYear=new Date().getFullYear();
+const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+const COLORS=['#2563eb','#16a34a','#d97706','#9333ea','#dc2626','#0891b2','#c2410c','#4f46e5','#0d9488','#b45309'];
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-// ─── FIREBASE INIT ──────────────────────────────────────────────────────────
-function initFirebase() {
-  try {
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='calendario') renderCalendario();
+  if(tab==='timeline') renderTimeline();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function totalSaldo(c){return(c.periodos||[]).reduce((s,p)=>s+(p.saldo||0),0)}
+function diasAgendados(c){return(c.agendadas||[]).reduce((s,a)=>s+calcDias(a.inicio,a.fim),0)}
+function calcDias(ini,fim){if(!ini||!fim)return 0;const d1=new Date(ini+'T00:00:00'),d2=new Date(fim+'T00:00:00');return Math.max(0,Math.round((d2-d1)/(864e5))+1)}
+function saldoRestante(c){return Math.max(0,totalSaldo(c)-diasAgendados(c))}
+function proximoConcessivo(c){const ps=(c.periodos||[]).filter(p=>p.saldo>0&&p.inicioConc);if(!ps.length)return null;ps.sort((a,b)=>new Date(a.inicioConc)-new Date(b.inicioConc));return ps[0].inicioConc}
+function diasAte(d){if(!d)return 999;return Math.floor((new Date(d+'T00:00:00')-TODAY)/864e5)}
+function getStatus(c){if(totalSaldo(c)===0)return'sem_saldo';const pc=proximoConcessivo(c);if(!pc)return'sem_saldo';const d=diasAte(pc);if(d<0)return'vencido';if(d<90)return'atencao';return'em_dia'}
+function fmtDate(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`}
+function nomeCurto(n){const p=n.trim().split(' ');return p.length<=2?n:p[0]+' '+p[p.length-1]}
+function genId(n){return n.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').substring(0,30)+'-'+Date.now().toString(36)}
+function statusPill(st){const m={vencido:['red','ti-alert-triangle','Vencido'],atencao:['amber','ti-clock','Atenção'],em_dia:['green','ti-check','Em dia'],sem_saldo:['gray','ti-minus','Sem saldo']};const[cls,icon,label]=m[st]||m.sem_saldo;return`<span class="pill ${cls}"><i class="ti ${icon}"></i>${label}</span>`}
+
+// ── FIREBASE ──────────────────────────────────────────────────
+function initFirebase(){
+  try{
     firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-
-    db.ref('.info/connected').on('value', snap => {
-      const connected = snap.val();
-      document.getElementById('syncDot').style.background = connected ? 'var(--green)' : 'var(--amber)';
-      document.getElementById('syncLabel').textContent = connected ? 'Sincronizado' : 'Reconectando...';
-      document.getElementById('syncLabel').style.color = connected ? 'var(--green-text)' : 'var(--amber-text)';
+    db=firebase.database();
+    db.ref('.info/connected').on('value',snap=>{
+      const ok=snap.val();
+      document.getElementById('syncDot').style.background=ok?'var(--green)':'var(--amber)';
+      document.getElementById('syncLabel').textContent=ok?'Sincronizado':'Reconectando...';
+      document.getElementById('syncLabel').style.color=ok?'var(--green-text)':'var(--amber-text)';
     });
-
-    const ref = db.ref('ferias_tributario/colaboradores');
-
-    ref.once('value', snap => {
-      if (!snap.val()) {
-        // primeiro acesso: popula com dados iniciais
-        const obj = {};
-        DADOS_INICIAIS.forEach(c => { obj[c.id] = c; });
-        ref.set(obj);
-      }
-    });
-
-    ref.on('value', snap => {
-      colaboradores = snap.val() || {};
-      render();
-      renderTimeline();
-    });
-
-  } catch(e) {
-    // Modo offline: usa dados locais
-    document.getElementById('syncDot').style.background = 'var(--amber)';
-    document.getElementById('syncLabel').textContent = 'Modo local';
-    document.getElementById('syncLabel').style.color = 'var(--amber-text)';
-    colaboradores = {};
-    DADOS_INICIAIS.forEach(c => { colaboradores[c.id] = JSON.parse(JSON.stringify(c)); });
+    const ref=db.ref('ferias_tributario/colaboradores');
+    ref.once('value',snap=>{if(!snap.val()){const obj={};DADOS_INICIAIS.forEach(c=>{obj[c.id]=c});ref.set(obj)}});
+    ref.on('value',snap=>{colaboradores=snap.val()||{};render();});
+  }catch(e){
+    document.getElementById('syncDot').style.background='var(--amber)';
+    document.getElementById('syncLabel').textContent='Modo local';
+    colaboradores={};DADOS_INICIAIS.forEach(c=>{colaboradores[c.id]=JSON.parse(JSON.stringify(c))});
     render();
-    renderTimeline();
   }
 }
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-function totalSaldo(c) {
-  return (c.periodos || []).reduce((s, p) => s + (p.saldo || 0), 0);
-}
-
-function diasAgendados(c) {
-  return (c.agendadas || []).reduce((s, a) => s + calcDias(a.inicio, a.fim), 0);
-}
-
-function calcDias(ini, fim) {
-  if (!ini || !fim) return 0;
-  const d1 = new Date(ini+'T00:00:00');
-  const d2 = new Date(fim+'T00:00:00');
-  return Math.max(0, Math.round((d2 - d1) / (1000*60*60*24)) + 1);
-}
-
-function saldoRestante(c) {
-  return Math.max(0, totalSaldo(c) - diasAgendados(c));
-}
-
-function proximoConcessivo(c) {
-  const ps = (c.periodos || []).filter(p => p.saldo > 0 && p.inicioConc);
-  if (!ps.length) return null;
-  ps.sort((a,b) => new Date(a.inicioConc) - new Date(b.inicioConc));
-  return ps[0].inicioConc;
-}
-
-function diasAte(dateStr) {
-  if (!dateStr) return 999;
-  const d = new Date(dateStr + 'T00:00:00');
-  return Math.floor((d - TODAY) / (1000*60*60*24));
-}
-
-function getStatus(c) {
-  if (totalSaldo(c) === 0) return 'sem_saldo';
-  const pc = proximoConcessivo(c);
-  if (!pc) return 'sem_saldo';
-  const dias = diasAte(pc);
-  if (dias < 0) return 'vencido';
-  if (dias < 90) return 'atencao';
-  return 'em_dia';
-}
-
-function fmtDate(s) {
-  if (!s) return '—';
-  const [y,m,d] = s.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function nomeCurto(nome) {
-  const parts = nome.trim().split(' ');
-  if (parts.length <= 2) return nome;
-  return parts[0] + ' ' + parts[parts.length-1];
-}
-
-function genId(nome) {
-  return nome.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').substring(0,30) + '-' + Date.now().toString(36);
-}
-
-function statusPill(st) {
-  const map = {
-    vencido: ['red','ti-alert-triangle','Vencido'],
-    atencao: ['amber','ti-clock','Atenção'],
-    em_dia: ['green','ti-check','Em dia'],
-    sem_saldo: ['gray','ti-minus','Sem saldo'],
-  };
-  const [cls, icon, label] = map[st] || map.sem_saldo;
-  return `<span class="pill ${cls}"><i class="ti ${icon}"></i>${label}</span>`;
-}
-
-// ─── RENDER TABLE ────────────────────────────────────────────────────────────
-function render() {
-  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
-  const fs = document.getElementById('filtStatus')?.value || '';
-  const fc = document.getElementById('filtCargo')?.value || '';
-
-  const list = Object.values(colaboradores);
-
-  // populate cargo filter
-  const cargos = [...new Set(list.map(c => c.cargo))].sort();
-  const selCargo = document.getElementById('filtCargo');
-  const curVal = selCargo.value;
-  selCargo.innerHTML = '<option value="">Todos os cargos</option>' +
-    cargos.map(c => `<option value="${c}" ${c===curVal?'selected':''}>${c}</option>`).join('');
-
-  const filtered = list.filter(c => {
-    if (q && !c.nome.toLowerCase().includes(q)) return false;
-    if (fs && getStatus(c) !== fs) return false;
-    if (fc && c.cargo !== fc) return false;
+// ── RENDER LISTA ──────────────────────────────────────────────
+function render(){
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  const fs=document.getElementById('filtStatus')?.value||'';
+  const fc=document.getElementById('filtCargo')?.value||'';
+  const list=Object.values(colaboradores);
+  const cargos=[...new Set(list.map(c=>c.cargo))].sort();
+  const selCargo=document.getElementById('filtCargo');
+  const curVal=selCargo.value;
+  selCargo.innerHTML='<option value="">Todos os cargos</option>'+cargos.map(c=>`<option value="${c}"${c===curVal?' selected':''}>${c}</option>`).join('');
+  const filtered=list.filter(c=>{
+    if(q&&!c.nome.toLowerCase().includes(q))return false;
+    if(fs&&getStatus(c)!==fs)return false;
+    if(fc&&c.cargo!==fc)return false;
     return true;
   });
-
-  // sort: vencido first, then atencao, then por concessivo
-  const order = {vencido:0,atencao:1,em_dia:2,sem_saldo:3};
-  filtered.sort((a,b) => {
-    const diff = order[getStatus(a)] - order[getStatus(b)];
-    if (diff !== 0) return diff;
-    return (proximoConcessivo(a)||'9') > (proximoConcessivo(b)||'9') ? 1 : -1;
-  });
-
-  // stats
-  const counts = {vencido:0,atencao:0,em_dia:0,sem_saldo:0};
-  list.forEach(c => counts[getStatus(c)]++);
-  document.getElementById('statsRow').innerHTML = `
-    <div class="stat-card blue"><div class="stat-num">${list.length}</div><div class="stat-label">Total de colaboradores</div></div>
+  const order={vencido:0,atencao:1,em_dia:2,sem_saldo:3};
+  filtered.sort((a,b)=>{const d=order[getStatus(a)]-order[getStatus(b)];return d!==0?d:(proximoConcessivo(a)||'9')>(proximoConcessivo(b)||'9')?1:-1});
+  const counts={vencido:0,atencao:0,em_dia:0,sem_saldo:0};
+  list.forEach(c=>counts[getStatus(c)]++);
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card blue"><div class="stat-num">${list.length}</div><div class="stat-label">Colaboradores</div></div>
     <div class="stat-card red"><div class="stat-num">${counts.vencido}</div><div class="stat-label">Vencido / crítico</div></div>
     <div class="stat-card amber"><div class="stat-num">${counts.atencao}</div><div class="stat-label">Atenção (&lt;90 dias)</div></div>
-    <div class="stat-card green"><div class="stat-num">${counts.em_dia}</div><div class="stat-label">Em dia</div></div>
-  `;
-
-  const tbody = document.getElementById('tableBody');
-  const empty = document.getElementById('emptyState');
-  if (filtered.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  tbody.innerHTML = filtered.map(c => {
-    const st = getStatus(c);
-    const saldo = totalSaldo(c);
-    const agend = diasAgendados(c);
-    const rest = saldoRestante(c);
-    const maxBar = Math.max(saldo, 30);
-    const barPct = Math.round(saldo / maxBar * 100);
-    const usedPct = saldo > 0 ? Math.round(agend / saldo * 100) : 0;
-    let barColor = '#16a34a';
-    if (saldo === 0) barColor = '#d1d5db';
-    else if (saldo <= 10) barColor = '#dc2626';
-    else if (saldo <= 20) barColor = '#d97706';
-
-    const pc = proximoConcessivo(c);
-    const dias = diasAte(pc);
-    const diasInfo = pc ? (dias < 0
-      ? `<div style="font-size:11px;color:var(--red);margin-top:2px"><i class="ti ti-alert-triangle" style="font-size:10px"></i> ${Math.abs(dias)} dias vencido</div>`
-      : `<div style="font-size:11px;color:var(--text3);margin-top:2px">${dias} dias p/ vencer</div>`) : '';
-
-    const agendHtml = (c.agendadas||[]).length > 0
-      ? (c.agendadas||[]).map(a => {
-          const d = calcDias(a.inicio, a.fim);
-          return `<div class="ferias-item ${a.confirmado?'confirmed':''}">
-            <i class="ti ${a.confirmado?'ti-check':'ti-calendar'}" style="font-size:11px"></i>
-            <span>${fmtDate(a.inicio)} – ${fmtDate(a.fim)}</span>
-            <span class="dias-badge">(${d}d)</span>
-          </div>`;
-        }).join('')
-      : `<span class="ferias-empty">Nenhuma agendada</span>`;
-
-    return `<tr>
-      <td class="name-cell">
-        <div class="name">${nomeCurto(c.nome)}</div>
-        <div class="sub" title="${c.nome}">${c.nome}</div>
-      </td>
-      <td>
-        <div style="font-size:13px;margin-bottom:4px">${c.cargo}</div>
-        <span class="vinculo-tag vinculo-${c.vinculo}">${c.vinculo}</span>
-      </td>
+    <div class="stat-card green"><div class="stat-num">${counts.em_dia}</div><div class="stat-label">Em dia</div></div>`;
+  const tbody=document.getElementById('tableBody');
+  const empty=document.getElementById('emptyState');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map(c=>{
+    const st=getStatus(c);
+    const saldo=totalSaldo(c),agend=diasAgendados(c),rest=saldoRestante(c);
+    const maxBar=Math.max(saldo,30),barPct=Math.round(saldo/maxBar*100);
+    const usedPct=saldo>0?Math.round(agend/saldo*100):0;
+    let barColor=saldo===0?'#d1d5db':saldo<=10?'var(--red)':saldo<=20?'var(--amber)':'var(--green)';
+    const pc=proximoConcessivo(c),dias=diasAte(pc);
+    const diasInfo=pc?(dias<0?`<div style="font-size:11px;color:var(--red);margin-top:2px"><i class="ti ti-alert-triangle" style="font-size:10px"></i> ${Math.abs(dias)} dias vencido</div>`:`<div style="font-size:11px;color:var(--text3);margin-top:2px">${dias} dias p/ vencer</div>`):'';
+    const agendHtml=(c.agendadas||[]).length>0?(c.agendadas||[]).map(a=>`<div class="ferias-item${a.confirmado?' confirmed':''}"><i class="ti ${a.confirmado?'ti-check':'ti-calendar'}" style="font-size:11px"></i><span>${fmtDate(a.inicio)} – ${fmtDate(a.fim)}</span><span class="dias-badge">(${calcDias(a.inicio,a.fim)}d)</span></div>`).join(''):`<span class="ferias-empty">Nenhuma agendada</span>`;
+    return`<tr>
+      <td class="name-cell"><div class="name">${nomeCurto(c.nome)}</div><div class="sub" title="${c.nome}">${c.nome}</div></td>
+      <td><div style="font-size:13px;margin-bottom:4px">${c.cargo}</div><span class="vinculo-tag vinculo-${c.vinculo}">${c.vinculo}</span></td>
       <td class="saldo-wrap">
-        <div class="saldo-top">
-          <span class="saldo-num" style="color:${barColor}">${saldo}d</span>
-          ${agend > 0 ? `<span class="saldo-agend">−${agend}d agend.</span>` : ''}
-        </div>
+        <div class="saldo-top"><span class="saldo-num" style="color:${barColor}">${saldo}d</span>${agend>0?`<span class="saldo-agend">−${agend}d agend.</span>`:''}</div>
         <div class="saldo-bar-bg"><div class="saldo-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
-        ${agend > 0 ? `<div class="saldo-bar-used"><div class="saldo-bar-used-fill" style="width:${usedPct}%"></div></div>` : ''}
-        ${agend > 0 ? `<div class="saldo-remaining">Restante: ${rest}d</div>` : ''}
+        ${agend>0?`<div class="saldo-bar-used"><div class="saldo-bar-used-fill" style="width:${usedPct}%"></div></div>`:''}
+        ${agend>0?`<div class="saldo-remaining">Restante: ${rest}d</div>`:''}
       </td>
       <td><div class="ferias-list">${agendHtml}</div></td>
-      <td>
-        <div style="font-size:12px;font-weight:600">${fmtDate(pc)}</div>
-        ${diasInfo}
-      </td>
+      <td><div style="font-size:12px;font-weight:600">${fmtDate(pc)}</div>${diasInfo}</td>
       <td>${statusPill(st)}</td>
-      <td>
-        <div class="actions">
-          <button class="icon-btn blue" onclick="openModalColaborador('${c.id}')" title="Editar"><i class="ti ti-edit"></i></button>
-          <button class="icon-btn red" onclick="openDelete('${c.id}')" title="Remover"><i class="ti ti-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="actions">
+        <button class="icon-btn blue" onclick="openModalColaborador('${c.id}')" title="Editar"><i class="ti ti-edit"></i></button>
+        <button class="icon-btn red" onclick="openDelete('${c.id}')" title="Remover"><i class="ti ti-trash"></i></button>
+      </div></td>
     </tr>`;
   }).join('');
 }
 
-// ─── TIMELINE ────────────────────────────────────────────────────────────────
-function toggleTimeline() {
-  timelineVisible = !timelineVisible;
-  document.getElementById('timelineSection').style.display = timelineVisible ? 'block' : 'none';
-  renderTimeline();
-}
+// ── CALENDÁRIO ────────────────────────────────────────────────
+function renderCalendario(){
+  document.getElementById('calYearLabel').textContent=calYear;
+  const list=Object.values(colaboradores);
 
-function renderTimeline() {
-  if (!timelineVisible) return;
-  const wrap = document.getElementById('timelineWrap');
-  const list = Object.values(colaboradores).filter(c => (c.agendadas||[]).length > 0);
-
-  const year = TODAY.getFullYear();
-  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-
-  if (list.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Nenhuma férias agendada. Edite um colaborador para adicionar datas.</div>';
-    return;
-  }
-
-  const colors = ['#2563eb','#16a34a','#d97706','#9333ea','#dc2626','#0891b2','#c2410c','#4f46e5'];
-  let ci = 0;
-
-  let html = `<div class="timeline-header">
-    <div class="timeline-name-col">Colaborador</div>
-    <div class="timeline-months">
-      ${months.map(m => `<div class="timeline-month-label">${m}</div>`).join('')}
-    </div>
-  </div>`;
-
-  list.forEach(c => {
-    const color = colors[ci++ % colors.length];
-    const blocks = (c.agendadas||[]).map(a => {
-      const s = new Date(a.inicio+'T00:00:00');
-      const e = new Date(a.fim+'T00:00:00');
-      const yearStart = new Date(year, 0, 1);
-      const yearEnd = new Date(year, 11, 31);
-      if (e < yearStart || s > yearEnd) return '';
-      const totalDays = 365;
-      const startDay = Math.max(0, Math.round((s - yearStart)/(1000*60*60*24)));
-      const endDay = Math.min(totalDays, Math.round((e - yearStart)/(1000*60*60*24)));
-      const left = (startDay / totalDays * 100).toFixed(1);
-      const width = Math.max(0.5, ((endDay - startDay + 1) / totalDays * 100)).toFixed(1);
-      const dias = calcDias(a.inicio, a.fim);
-      return `<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color};opacity:${a.confirmado?1:.7}" title="${fmtDate(a.inicio)} – ${fmtDate(a.fim)} (${dias}d)">${dias}d</div>`;
-    }).join('');
-
-    html += `<div class="timeline-row">
-      <div class="timeline-row-name" title="${c.nome}">${nomeCurto(c.nome)}</div>
-      <div class="timeline-bar-area">${blocks}</div>
-    </div>`;
+  // Build map: "YYYY-MM-DD" -> [{nome, confirmado}]
+  const dayMap={};
+  list.forEach(c=>{
+    (c.agendadas||[]).forEach(a=>{
+      if(!a.inicio||!a.fim)return;
+      const s=new Date(a.inicio+'T00:00:00'), e=new Date(a.fim+'T00:00:00');
+      for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){
+        if(d.getFullYear()!==calYear)continue;
+        const key=d.toISOString().slice(0,10);
+        if(!dayMap[key])dayMap[key]=[];
+        dayMap[key].push({nome:nomeCurto(c.nome),confirmado:!!a.confirmado});
+      }
+    });
   });
 
-  wrap.innerHTML = html;
+  const todayStr=TODAY.toISOString().slice(0,10);
+  const html=MESES.map((mes,mi)=>{
+    const firstDay=new Date(calYear,mi,1);
+    const daysInMonth=new Date(calYear,mi+1,0).getDate();
+    let startDow=firstDay.getDay(); // 0=Sun
+    // Count how many days have people this month
+    let diasComFerias=0;
+    for(let d=1;d<=daysInMonth;d++){
+      const key=`${calYear}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if(dayMap[key]&&dayMap[key].length>0)diasComFerias++;
+    }
+    // Days grid
+    let cells='';
+    // Empty cells before first day
+    for(let i=0;i<startDow;i++) cells+=`<div class="cal-day empty"></div>`;
+    for(let d=1;d<=daysInMonth;d++){
+      const dow=(startDow+d-1)%7;
+      const isWeekend=dow===0||dow===6;
+      const key=`${calYear}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday=key===todayStr;
+      const people=dayMap[key]||[];
+      const hasConf=people.some(p=>p.confirmado);
+      const hasPend=people.some(p=>!p.confirmado);
+      let cls='cal-day';
+      if(isWeekend)cls+=' weekend';
+      if(isToday)cls+=' today';
+      if(people.length>0){
+        if(hasConf&&hasPend)cls+=' has-ferias mixed';
+        else if(hasConf)cls+=' has-ferias confirmed';
+        else cls+=' has-ferias';
+      }
+      const shown=people.slice(0,2);
+      const extra=people.length-shown.length;
+      const dots=shown.map(p=>`<div class="cal-person-dot ${p.confirmado?'cal-dot-confirmed':'cal-dot-pending'}" title="${p.nome}">${p.nome}</div>`).join('');
+      const moreTag=extra>0?`<div class="cal-more">+${extra} mais</div>`:'';
+      cells+=`<div class="${cls}"><div class="day-num">${d}</div>${people.length>0?`<div class="cal-day-people">${dots}${moreTag}</div>`:''}</div>`;
+    }
+    return`<div class="cal-month">
+      <div class="cal-month-header">
+        <span class="cal-month-name">${mes} ${calYear}</span>
+        <span class="cal-month-count">${diasComFerias>0?`<span style="color:var(--accent-text);font-weight:600">${diasComFerias} dias c/ férias</span>`:'<span style="color:var(--text3)">Sem férias</span>'}</span>
+      </div>
+      <div class="cal-days-header">
+        ${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d=>`<div class="cal-day-label">${d}</div>`).join('')}
+      </div>
+      <div class="cal-days">${cells}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('calGrid').innerHTML=html;
 }
 
-// ─── MODAL COLABORADOR ───────────────────────────────────────────────────────
-let periodosTemp = [];
-let agendaTemp = [];
+// ── TIMELINE ──────────────────────────────────────────────────
+function renderTimeline(){
+  document.getElementById('tlYearLabel').textContent=tlYear;
+  const wrap=document.getElementById('timelineWrap');
+  const list=Object.values(colaboradores).filter(c=>(c.agendadas||[]).some(a=>a.inicio&&a.fim&&(new Date(a.inicio+'T00:00:00').getFullYear()===tlYear||new Date(a.fim+'T00:00:00').getFullYear()===tlYear)));
+  const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  if(!list.length){wrap.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Nenhuma férias agendada para '+tlYear+'.</div>';return}
+  let ci=0;
+  let html=`<div class="timeline-header"><div class="timeline-name-col">Colaborador</div><div class="timeline-months">${months.map(m=>`<div class="timeline-month-label">${m}</div>`).join('')}</div></div>`;
+  list.forEach(c=>{
+    const color=COLORS[ci++%COLORS.length];
+    const yearStart=new Date(tlYear,0,1), yearEnd=new Date(tlYear,11,31,23,59);
+    const totalMs=yearEnd-yearStart;
+    const blocks=(c.agendadas||[]).map(a=>{
+      const s=new Date(a.inicio+'T00:00:00'), e=new Date(a.fim+'T00:00:00');
+      if(e<yearStart||s>yearEnd)return'';
+      const clampS=s<yearStart?yearStart:s, clampE=e>yearEnd?yearEnd:e;
+      const left=((clampS-yearStart)/totalMs*100).toFixed(2);
+      const width=Math.max(0.5,((clampE-clampS)/totalMs*100)).toFixed(2);
+      const dias=calcDias(a.inicio,a.fim);
+      return`<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color};opacity:${a.confirmado?1:.7}" title="${fmtDate(a.inicio)} – ${fmtDate(a.fim)} (${dias}d)">${dias}d</div>`;
+    }).join('');
+    html+=`<div class="timeline-row"><div class="timeline-row-name" title="${c.nome}">${nomeCurto(c.nome)}</div><div class="timeline-bar-area">${blocks}</div></div>`;
+  });
+  wrap.innerHTML=html;
+}
 
-function openModalColaborador(id) {
-  editingId = id || null;
-  const c = id ? colaboradores[id] : null;
-
-  document.getElementById('modalTitle').textContent = c ? 'Editar colaborador' : 'Novo colaborador';
-  document.getElementById('f_nome').value = c?.nome || '';
-  document.getElementById('f_cargo').value = c?.cargo || '';
-  document.getElementById('f_vinculo').value = c?.vinculo || 'CLT';
-  document.getElementById('f_admissao').value = c?.admissao || '';
-
-  periodosTemp = c?.periodos ? JSON.parse(JSON.stringify(c.periodos)) : [{inicio:'',fim:'',inicioConc:'',saldo:0}];
-  agendaTemp = c?.agendadas ? JSON.parse(JSON.stringify(c.agendadas)) : [];
-
-  renderPeriodos();
-  renderAgenda();
+// ── MODAL COLABORADOR ─────────────────────────────────────────
+let periodosTemp=[], agendaTemp=[];
+function openModalColaborador(id){
+  editingId=id||null;
+  const c=id?colaboradores[id]:null;
+  document.getElementById('modalTitle').textContent=c?'Editar colaborador':'Novo colaborador';
+  document.getElementById('f_nome').value=c?.nome||'';
+  document.getElementById('f_cargo').value=c?.cargo||'';
+  document.getElementById('f_vinculo').value=c?.vinculo||'CLT';
+  document.getElementById('f_admissao').value=c?.admissao||'';
+  periodosTemp=c?.periodos?JSON.parse(JSON.stringify(c.periodos)):[{inicio:'',fim:'',inicioConc:'',saldo:0}];
+  agendaTemp=c?.agendadas?JSON.parse(JSON.stringify(c.agendadas)):[];
+  renderPeriodos(); renderAgenda();
   document.getElementById('modalOverlay').classList.add('open');
 }
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-  editingId = null;
-}
-
-function closeModalIfOutside(e) {
-  if (e.target.id === 'modalOverlay') closeModal();
-}
-
-function addPeriodo() {
-  periodosTemp.push({inicio:'',fim:'',inicioConc:'',saldo:0});
-  renderPeriodos();
-}
-
-function removePeriodo(i) {
-  periodosTemp.splice(i, 1);
-  renderPeriodos();
-}
-
-function renderPeriodos() {
-  document.getElementById('periodosContainer').innerHTML = periodosTemp.map((p, i) => `
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');editingId=null}
+function closeModalIfOutside(e){if(e.target.id==='modalOverlay')closeModal()}
+function addPeriodo(){periodosTemp.push({inicio:'',fim:'',inicioConc:'',saldo:0});renderPeriodos()}
+function removePeriodo(i){periodosTemp.splice(i,1);renderPeriodos()}
+function renderPeriodos(){
+  document.getElementById('periodosContainer').innerHTML=periodosTemp.map((p,i)=>`
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-size:12px;font-weight:600;color:var(--text2)">Período ${i+1}</span>
-        ${periodosTemp.length > 1 ? `<button class="icon-btn red" onclick="removePeriodo(${i})"><i class="ti ti-trash"></i></button>` : ''}
+        ${periodosTemp.length>1?`<button class="icon-btn" onclick="removePeriodo(${i})" style="color:var(--red-text)"><i class="ti ti-trash"></i></button>`:''}
       </div>
       <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 80px;gap:8px">
-        <div>
-          <label class="form-label">Início aquisitivo</label>
-          <input type="date" class="form-input" value="${p.inicio||''}" onchange="periodosTemp[${i}].inicio=this.value">
-        </div>
-        <div>
-          <label class="form-label">Fim aquisitivo</label>
-          <input type="date" class="form-input" value="${p.fim||''}" onchange="periodosTemp[${i}].fim=this.value">
-        </div>
-        <div>
-          <label class="form-label">Início concessivo</label>
-          <input type="date" class="form-input" value="${p.inicioConc||''}" onchange="periodosTemp[${i}].inicioConc=this.value">
-        </div>
-        <div>
-          <label class="form-label">Saldo (dias)</label>
-          <input type="number" class="form-input" min="0" max="60" value="${p.saldo||0}" onchange="periodosTemp[${i}].saldo=+this.value">
-        </div>
+        <div><label class="form-label">Início aquisitivo</label><input type="date" class="form-input" value="${p.inicio||''}" onchange="periodosTemp[${i}].inicio=this.value"></div>
+        <div><label class="form-label">Fim aquisitivo</label><input type="date" class="form-input" value="${p.fim||''}" onchange="periodosTemp[${i}].fim=this.value"></div>
+        <div><label class="form-label">Início concessivo</label><input type="date" class="form-input" value="${p.inicioConc||''}" onchange="periodosTemp[${i}].inicioConc=this.value"></div>
+        <div><label class="form-label">Saldo (d)</label><input type="number" class="form-input" min="0" max="60" value="${p.saldo||0}" onchange="periodosTemp[${i}].saldo=+this.value"></div>
       </div>
-    </div>
-  `).join('');
-}
-
-function addAgenda() {
-  agendaTemp.push({inicio:'',fim:'',confirmado:false});
-  renderAgenda();
-}
-
-function removeAgenda(i) {
-  agendaTemp.splice(i, 1);
-  renderAgenda();
-}
-
-function toggleConfirmado(i) {
-  agendaTemp[i].confirmado = !agendaTemp[i].confirmado;
-  renderAgenda();
-}
-
-function renderAgenda() {
-  if (agendaTemp.length === 0) {
-    document.getElementById('agendaContainer').innerHTML = '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Nenhuma férias agendada.</div>';
-    return;
-  }
-  document.getElementById('agendaContainer').innerHTML = agendaTemp.map((a, i) => {
-    const dias = calcDias(a.inicio, a.fim);
-    return `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+    </div>`).join('')}
+function addAgenda(){agendaTemp.push({inicio:'',fim:'',confirmado:false});renderAgenda()}
+function removeAgenda(i){agendaTemp.splice(i,1);renderAgenda()}
+function toggleConfirmado(i){agendaTemp[i].confirmado=!agendaTemp[i].confirmado;renderAgenda()}
+function renderAgenda(){
+  if(!agendaTemp.length){document.getElementById('agendaContainer').innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Nenhuma férias agendada.</div>';return}
+  document.getElementById('agendaContainer').innerHTML=agendaTemp.map((a,i)=>{
+    const dias=calcDias(a.inicio,a.fim);
+    return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:600;color:var(--text2)">
-          Férias ${i+1}${dias>0?` · <span style="color:var(--accent)">${dias} dias</span>`:''}
-        </span>
-        <button class="icon-btn red" onclick="removeAgenda(${i})"><i class="ti ti-trash"></i></button>
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">Férias ${i+1}${dias>0?` · <span style="color:var(--accent)">${dias} dias</span>`:''}</span>
+        <button class="icon-btn" onclick="removeAgenda(${i})" style="color:var(--red-text)"><i class="ti ti-trash"></i></button>
       </div>
       <div class="form-row" style="gap:8px">
-        <div>
-          <label class="form-label">Data início</label>
-          <input type="date" class="form-input" value="${a.inicio||''}" onchange="agendaTemp[${i}].inicio=this.value;renderAgenda()">
-        </div>
-        <div>
-          <label class="form-label">Data fim</label>
-          <input type="date" class="form-input" value="${a.fim||''}" onchange="agendaTemp[${i}].fim=this.value;renderAgenda()">
-        </div>
+        <div><label class="form-label">Data início</label><input type="date" class="form-input" value="${a.inicio||''}" onchange="agendaTemp[${i}].inicio=this.value;renderAgenda()"></div>
+        <div><label class="form-label">Data fim</label><input type="date" class="form-input" value="${a.fim||''}" onchange="agendaTemp[${i}].fim=this.value;renderAgenda()"></div>
       </div>
       <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)">
-          <input type="checkbox" ${a.confirmado?'checked':''} onchange="toggleConfirmado(${i})" style="width:14px;height:14px">
-          Férias confirmadas
+          <input type="checkbox" ${a.confirmado?'checked':''} onchange="toggleConfirmado(${i})" style="width:14px;height:14px"> Férias confirmadas
         </label>
-        ${a.confirmado ? '<span class="pill green" style="font-size:10px"><i class="ti ti-check"></i>Confirmado</span>' : '<span class="pill amber" style="font-size:10px"><i class="ti ti-clock"></i>Aguardando</span>'}
+        ${a.confirmado?'<span class="pill green" style="font-size:10px"><i class="ti ti-check"></i>Confirmado</span>':'<span class="pill amber" style="font-size:10px"><i class="ti ti-clock"></i>Aguardando</span>'}
       </div>
-    </div>
-  `}).join('');
+    </div>`}).join('')}
+function saveColaborador(){
+  const nome=document.getElementById('f_nome').value.trim();
+  const cargo=document.getElementById('f_cargo').value.trim();
+  if(!nome||!cargo){toast('Preencha nome e cargo');return}
+  const id=editingId||genId(nome);
+  const data={id,nome,cargo,vinculo:document.getElementById('f_vinculo').value,admissao:document.getElementById('f_admissao').value,periodos:periodosTemp.filter(p=>p.saldo>0||p.inicioConc),agendadas:agendaTemp.filter(a=>a.inicio&&a.fim)};
+  if(db){db.ref(`ferias_tributario/colaboradores/${id}`).set(data).then(()=>{toast(editingId?'Atualizado!':'Adicionado!');closeModal()}).catch(()=>toast('Erro ao salvar.'))}
+  else{colaboradores[id]=data;render();toast(editingId?'Atualizado (local)!':'Adicionado (local)!');closeModal()}
 }
-
-function saveColaborador() {
-  const nome = document.getElementById('f_nome').value.trim();
-  const cargo = document.getElementById('f_cargo').value.trim();
-  if (!nome || !cargo) { toast('Preencha nome e cargo'); return; }
-
-  const id = editingId || genId(nome);
-  const data = {
-    id,
-    nome,
-    cargo,
-    vinculo: document.getElementById('f_vinculo').value,
-    admissao: document.getElementById('f_admissao').value,
-    periodos: periodosTemp.filter(p => p.saldo > 0 || p.inicioConc),
-    agendadas: agendaTemp.filter(a => a.inicio && a.fim),
-  };
-
-  if (db) {
-    db.ref(`ferias_tributario/colaboradores/${id}`).set(data)
-      .then(() => { toast(editingId ? 'Colaborador atualizado!' : 'Colaborador adicionado!'); closeModal(); })
-      .catch(() => { toast('Erro ao salvar. Tente novamente.'); });
-  } else {
-    colaboradores[id] = data;
-    render();
-    renderTimeline();
-    toast(editingId ? 'Atualizado (modo local)!' : 'Adicionado (modo local)!');
-    closeModal();
-  }
+// ── DELETE ────────────────────────────────────────────────────
+function openDelete(id){deleteId=id;document.getElementById('deleteNome').textContent=colaboradores[id]?.nome||'';document.getElementById('deleteOverlay').classList.add('open')}
+function closeDelete(){document.getElementById('deleteOverlay').classList.remove('open');deleteId=null}
+function closeDeleteIfOutside(e){if(e.target.id==='deleteOverlay')closeDelete()}
+function confirmDelete(){
+  if(!deleteId)return;
+  if(db){db.ref(`ferias_tributario/colaboradores/${deleteId}`).remove().then(()=>{toast('Removido.');closeDelete()}).catch(()=>toast('Erro.'))}
+  else{delete colaboradores[deleteId];render();toast('Removido.');closeDelete()}
 }
-
-// ─── DELETE ──────────────────────────────────────────────────────────────────
-function openDelete(id) {
-  deleteId = id;
-  document.getElementById('deleteNome').textContent = colaboradores[id]?.nome || '';
-  document.getElementById('deleteOverlay').classList.add('open');
-}
-
-function closeDelete() {
-  document.getElementById('deleteOverlay').classList.remove('open');
-  deleteId = null;
-}
-
-function closeDeleteIfOutside(e) {
-  if (e.target.id === 'deleteOverlay') closeDelete();
-}
-
-function confirmDelete() {
-  if (!deleteId) return;
-  if (db) {
-    db.ref(`ferias_tributario/colaboradores/${deleteId}`).remove()
-      .then(() => { toast('Colaborador removido.'); closeDelete(); })
-      .catch(() => toast('Erro ao remover.'));
-  } else {
-    delete colaboradores[deleteId];
-    render();
-    renderTimeline();
-    toast('Removido (modo local).');
-    closeDelete();
-  }
-}
-
-// ─── TOAST ───────────────────────────────────────────────────────────────────
-function toast(msg) {
-  const c = document.getElementById('toastContainer');
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg){const c=document.getElementById('toastContainer');const t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(()=>t.remove(),3000)}
+// ── INIT ──────────────────────────────────────────────────────
 initFirebase();
 </script>
-
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║         COMO CONFIGURAR O FIREBASE (leia antes de usar)      ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  1. Acesse https://console.firebase.google.com               ║
-║  2. Crie um projeto (ex: "obdc-ferias")                      ║
-║  3. Vá em Build > Realtime Database > Create Database        ║
-║     Escolha "Start in test mode" (30 dias grátis)            ║
-║  4. Vá em Project Settings > Your apps > Web (</>)           ║
-║     Copie o firebaseConfig e substitua no topo deste arquivo  ║
-║  5. Hospede no GitHub Pages ou Netlify (arraste o arquivo)   ║
-║  6. Compartilhe o link com o time — edições em tempo real!   ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
--->
-
 </body>
 </html>
