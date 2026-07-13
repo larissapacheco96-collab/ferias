@@ -278,6 +278,14 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- MODAL DETALHE DO DIA -->
+<div class="overlay" id="dayOverlay" onclick="if(event.target.id==='dayOverlay')closeDayDetail()">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><div class="modal-title" id="dayTitle"></div><button class="icon-btn" onclick="closeDayDetail()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body" id="dayBody"></div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
@@ -351,6 +359,37 @@ function nomeCurto(n){const p=n.trim().split(' ');return p.length<=2?n:p[0]+' '+
 function genId(n){return n.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').substring(0,30)+'-'+Date.now().toString(36)}
 function statusPill(st){const m={vencido:['red','ti-alert-triangle','Vencido'],atencao:['amber','ti-clock','Atenção'],em_dia:['green','ti-check','Em dia'],sem_saldo:['gray','ti-minus','Sem saldo']};const[cls,icon,label]=m[st]||m.sem_saldo;return`<span class="pill ${cls}"><i class="ti ${icon}"></i>${label}</span>`}
 
+// ── CORREÇÃO DE DATAS (ano digitado errado, ex.: 0026 → 2026) ─
+function fixDate(s){
+  if(!s||typeof s!=='string')return s;
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return s;
+  let y=parseInt(m[1],10);
+  if(y>=1900)return s;
+  y=(y%100)+2000; // 0026 → 2026
+  return String(y).padStart(4,'0')+'-'+m[2]+'-'+m[3];
+}
+function fixColab(c){
+  let changed=false;
+  const fx=(obj,k)=>{const v=fixDate(obj[k]);if(v!==obj[k]){obj[k]=v;changed=true}};
+  (c.periodos||[]).forEach(p=>{fx(p,'inicio');fx(p,'fim');fx(p,'inicioConc')});
+  (c.agendadas||[]).forEach(a=>{
+    fx(a,'inicio');fx(a,'fim');
+    if(a.inicio&&a.fim){
+      const d=calcDias(a.inicio,a.fim);
+      // Se o intervalo ficou inválido ou absurdo e os anos diferem, alinha o ano do início ao do fim
+      if((d<=0||d>60)&&a.inicio.slice(0,4)!==a.fim.slice(0,4)){
+        const cand=a.fim.slice(0,4)+a.inicio.slice(4);
+        const d2=calcDias(cand,a.fim);
+        if(d2>=1&&d2<=60){a.inicio=cand;changed=true}
+      }
+    }
+  });
+  fx(c,'admissao');
+  return changed;
+}
+let _migrando=false;
+
 // ── FIREBASE ──────────────────────────────────────────────────
 function initFirebase(){
   try{
@@ -364,7 +403,17 @@ function initFirebase(){
     });
     const ref=db.ref('ferias_tributario/colaboradores');
     ref.once('value',snap=>{if(!snap.val()){const obj={};DADOS_INICIAIS.forEach(c=>{obj[c.id]=c});ref.set(obj)}});
-    ref.on('value',snap=>{colaboradores=snap.val()||{};render();});
+    ref.on('value',snap=>{
+      colaboradores=snap.val()||{};
+      const fixes={};
+      Object.keys(colaboradores).forEach(id=>{if(fixColab(colaboradores[id]))fixes[id]=colaboradores[id]});
+      const ids=Object.keys(fixes);
+      if(ids.length&&!_migrando){
+        _migrando=true;
+        ref.update(fixes).then(()=>{_migrando=false;toast('🛠 Datas corrigidas em '+ids.length+' cadastro(s)')}).catch(()=>{_migrando=false});
+      }
+      render();
+    });
   }catch(e){
     document.getElementById('syncDot').style.background='var(--amber)';
     document.getElementById('syncLabel').textContent='Modo local';
@@ -451,6 +500,7 @@ function renderCalendario(){
     });
   });
 
+  calDayMap=dayMap;
   const todayStr=TODAY.toISOString().slice(0,10);
   const html=MESES.map((mes,mi)=>{
     const firstDay=new Date(calYear,mi,1);
@@ -486,7 +536,8 @@ function renderCalendario(){
       const extra=people.length-shown.length;
       const dots=shown.map(p=>`<div class="cal-person-dot ${p.confirmado?'cal-dot-confirmed':'cal-dot-pending'}" title="${p.nome}">${p.nome}</div>`).join('');
       const moreTag=extra>0?`<div class="cal-more">+${extra} mais</div>`:'';
-      cells+=`<div class="${cls}"><div class="day-num">${d}</div>${people.length>0?`<div class="cal-day-people">${dots}${moreTag}</div>`:''}</div>`;
+      const clickAttr=people.length>0?` style="cursor:pointer" onclick="openDayDetail('${key}')" title="${people.map(p=>p.nome).join(', ')}"`:'';
+      cells+=`<div class="${cls}"${clickAttr}><div class="day-num">${d}</div>${people.length>0?`<div class="cal-day-people">${dots}${moreTag}</div>`:''}</div>`;
     }
     return`<div class="cal-month">
       <div class="cal-month-header">
@@ -501,6 +552,17 @@ function renderCalendario(){
   }).join('');
   document.getElementById('calGrid').innerHTML=html;
 }
+
+// ── DETALHE DO DIA (calendário) ───────────────────────────────
+let calDayMap={};
+function openDayDetail(key){
+  const people=calDayMap[key]||[];
+  if(!people.length)return;
+  document.getElementById('dayTitle').textContent='Férias em '+fmtDate(key)+' · '+people.length+' pessoa'+(people.length>1?'s':'');
+  document.getElementById('dayBody').innerHTML=people.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="font-weight:500">${p.nome}</span>${p.confirmado?'<span class="pill green"><i class="ti ti-check"></i>Confirmado</span>':'<span class="pill amber"><i class="ti ti-clock"></i>Aguardando</span>'}</div>`).join('');
+  document.getElementById('dayOverlay').classList.add('open');
+}
+function closeDayDetail(){document.getElementById('dayOverlay').classList.remove('open')}
 
 // ── TIMELINE ──────────────────────────────────────────────────
 function renderTimeline(){
@@ -556,9 +618,9 @@ function renderPeriodos(){
         ${periodosTemp.length>1?`<button class="icon-btn" onclick="removePeriodo(${i})" style="color:var(--red-text)"><i class="ti ti-trash"></i></button>`:''}
       </div>
       <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 80px;gap:8px">
-        <div><label class="form-label">Início aquisitivo</label><input type="date" class="form-input" value="${p.inicio||''}" onchange="periodosTemp[${i}].inicio=this.value"></div>
-        <div><label class="form-label">Fim aquisitivo</label><input type="date" class="form-input" value="${p.fim||''}" onchange="periodosTemp[${i}].fim=this.value"></div>
-        <div><label class="form-label">Início concessivo</label><input type="date" class="form-input" value="${p.inicioConc||''}" onchange="periodosTemp[${i}].inicioConc=this.value"></div>
+        <div><label class="form-label">Início aquisitivo</label><input type="date" class="form-input" value="${p.inicio||''}" onchange="periodosTemp[${i}].inicio=fixDate(this.value)"></div>
+        <div><label class="form-label">Fim aquisitivo</label><input type="date" class="form-input" value="${p.fim||''}" onchange="periodosTemp[${i}].fim=fixDate(this.value)"></div>
+        <div><label class="form-label">Início concessivo</label><input type="date" class="form-input" value="${p.inicioConc||''}" onchange="periodosTemp[${i}].inicioConc=fixDate(this.value)"></div>
         <div><label class="form-label">Saldo (d)</label><input type="number" class="form-input" min="0" max="60" value="${p.saldo||0}" onchange="periodosTemp[${i}].saldo=+this.value"></div>
       </div>
     </div>`).join('')}
@@ -575,8 +637,8 @@ function renderAgenda(){
         <button class="icon-btn" onclick="removeAgenda(${i})" style="color:var(--red-text)"><i class="ti ti-trash"></i></button>
       </div>
       <div class="form-row" style="gap:8px">
-        <div><label class="form-label">Data início</label><input type="date" class="form-input" value="${a.inicio||''}" onchange="agendaTemp[${i}].inicio=this.value;renderAgenda()"></div>
-        <div><label class="form-label">Data fim</label><input type="date" class="form-input" value="${a.fim||''}" onchange="agendaTemp[${i}].fim=this.value;renderAgenda()"></div>
+        <div><label class="form-label">Data início</label><input type="date" class="form-input" value="${a.inicio||''}" onchange="agendaTemp[${i}].inicio=fixDate(this.value);renderAgenda()"></div>
+        <div><label class="form-label">Data fim</label><input type="date" class="form-input" value="${a.fim||''}" onchange="agendaTemp[${i}].fim=fixDate(this.value);renderAgenda()"></div>
       </div>
       <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)">
@@ -591,6 +653,7 @@ function saveColaborador(){
   if(!nome||!cargo){toast('Preencha nome e cargo');return}
   const id=editingId||genId(nome);
   const data={id,nome,cargo,vinculo:document.getElementById('f_vinculo').value,admissao:document.getElementById('f_admissao').value,periodos:periodosTemp.filter(p=>p.saldo>0||p.inicioConc),agendadas:agendaTemp.filter(a=>a.inicio&&a.fim)};
+  fixColab(data);
   if(db){db.ref(`ferias_tributario/colaboradores/${id}`).set(data).then(()=>{toast(editingId?'Atualizado!':'Adicionado!');closeModal()}).catch(()=>toast('Erro ao salvar.'))}
   else{colaboradores[id]=data;render();toast(editingId?'Atualizado (local)!':'Adicionado (local)!');closeModal()}
 }
