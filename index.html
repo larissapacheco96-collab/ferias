@@ -115,10 +115,10 @@ tbody tr:last-child td{border-bottom:none}
 .cal-month-header{background:var(--surface2);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
 .cal-month-name{font-size:13px;font-weight:700;color:var(--text)}
 .cal-month-count{font-size:11px;color:var(--text2)}
-.cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:8px 10px 4px;background:var(--surface)}
+.cal-days-header{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:8px 10px 4px;background:var(--surface)}
 .cal-day-label{font-size:10px;font-weight:600;color:var(--text3);text-align:center}
-.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 10px 10px}
-.cal-day{min-height:32px;border-radius:5px;padding:3px 4px;font-size:11px;position:relative;cursor:default;transition:background .1s}
+.cal-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:0 10px 10px}
+.cal-day{min-height:32px;min-width:0;overflow:hidden;border-radius:5px;padding:3px 4px;font-size:11px;position:relative;cursor:default;transition:background .1s}
 .cal-day.empty{background:transparent}
 .cal-day.today{outline:2px solid var(--accent);outline-offset:-1px}
 .cal-day.weekend{background:#faf9f8}
@@ -129,7 +129,7 @@ tbody tr:last-child td{border-bottom:none}
 .cal-day.has-ferias.confirmed .day-num{color:var(--green-text)}
 .cal-day.has-ferias.mixed{background:#fef9ec}
 .cal-day.has-ferias.mixed .day-num{color:var(--amber-text)}
-.cal-day-people{display:flex;flex-direction:column;gap:1px;margin-top:2px}
+.cal-day-people{display:flex;flex-direction:column;gap:1px;margin-top:2px;min-width:0}
 .cal-person-dot{font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .cal-dot-pending{background:var(--amber-light);color:var(--amber-text)}
 .cal-dot-confirmed{background:var(--green-light);color:var(--green-text)}
